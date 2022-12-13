@@ -1,0 +1,64 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <value>
+          <list size="37">
+            <item index="0" class="java.lang.String" itemvalue="tqdm" />
+            <item index="1" class="java.lang.String" itemvalue="torchtext" />
+            <item index="2" class="java.lang.String" itemvalue="waitress" />
+            <item index="3" class="java.lang.String" itemvalue="torch" />
+            <item index="4" class="java.lang.String" itemvalue="tensorboard" />
+            <item index="5" class="java.lang.String" itemvalue="glob3" />
+            <item index="6" class="java.lang.String" itemvalue="scikit-learn" />
+            <item index="7" class="java.lang.String" itemvalue="numpy" />
+            <item index="8" class="java.lang.String" itemvalue="parse" />
+            <item index="9" class="java.lang.String" itemvalue="tensorflow-gpu" />
+            <item index="10" class="java.lang.String" itemvalue="easydict" />
+            <item index="11" class="java.lang.String" itemvalue="nibabel" />
+            <item index="12" class="java.lang.String" itemvalue="ipython" />
+            <item index="13" class="java.lang.String" itemvalue="coloredlogs" />
+            <item index="14" class="java.lang.String" itemvalue="GitPython" />
+            <item index="15" class="java.lang.String" itemvalue="tensorboardX" />
+            <item index="16" class="java.lang.String" itemvalue="torchvision" />
+            <item index="17" class="java.lang.String" itemvalue="torchaudio" />
+            <item index="18" class="java.lang.String" itemvalue="vtk_visualizer" />
+            <item index="19" class="java.lang.String" itemvalue="scipy" />
+            <item index="20" class="java.lang.String" itemvalue="PyYAML" />
+            <item index="21" class="java.lang.String" itemvalue="scikit_learn" />
+            <item index="22" class="java.lang.String" itemvalue="h5py" />
+            <item index="23" class="java.lang.String" itemvalue="matplotlib" />
+            <item index="24" class="java.lang.String" itemvalue="open3d" />
+            <item index="25" class="java.lang.String" itemvalue="gitpython" />
+            <item index="26" class="java.lang.String" itemvalue="torch_scatter" />
+            <item index="27" class="java.lang.String" itemvalue="timm" />
+            <item index="28" class="java.lang.String" itemvalue="torch_points_kernels" />
+            <item index="29" class="java.lang.String" itemvalue="SharedArray" />
+            <item index="30" class="java.lang.String" itemvalue="torch_points3d" />
+            <item index="31" class="java.lang.String" itemvalue="setuptools" />
+            <item index="32" class="java.lang.String" itemvalue="torch_geometric" />
+            <item index="33" class="java.lang.String" itemvalue="Pillow" />
+            <item index="34" class="java.lang.String" itemvalue="transforms3d" />
+            <item index="35" class="java.lang.String" itemvalue="pytorch3d" />
+            <item index="36" class="java.lang.String" itemvalue="argparse" />
+          </list>
+        </value>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyPep8NamingInspection" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <option name="ignoredErrors">
+        <list>
+          <option value="N803" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="models.backbone_kpconv.cpp_wrappers.cpp_neighbors.radius_neighbors" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
