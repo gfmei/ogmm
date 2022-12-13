@@ -70,8 +70,8 @@ class GMMReg(nn.Module):
         tgt_clu_loss = self.cluloss(tgt, tgt_xyz_mu, tgt_feats, tgt_gamma)[1]
         # rot, trans, soft_tgt, soft_src_scores, soft_src, soft_tgt_scores = self.soft_svd(
         # src_mu, tgt_mu, src_feats, tgt_feats)
-        rot, trans, soft_tgt_mu, soft_src_mu_scores, soft_src_mu, soft_tgt_mu_scores = self.soft_svd(
-            src, tgt, src_feats, tgt_feats, src_log_scores, tgt_log_scores)
+        rot, trans, soft_corr_mu, soft_mu_scores = self.soft_svd(
+            src, tgt, src_feats, tgt_feats, src_log_scores, tgt_log_scores, src_o, tgt_o)
         # iv_transf = soft_svd(tgt_mu_xyz, src_mu_xyz, tgt_mu_feats, src_mu_feats)
         # self.crsloss(tgt_mu, src_mu, tgt_log_scores, src_log_scores, iv_transf[0], iv_transf[1])
         clu_loss = 0.5*(src_clu_loss + tgt_clu_loss)

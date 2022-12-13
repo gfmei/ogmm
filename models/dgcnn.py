@@ -10,7 +10,7 @@ from torch import nn
 import torch.nn.functional as F
 
 from lib.se3 import compute_rigid_transformation
-from lib.utils import knn, get_graph_feature, sinkhorn, cos_similarity, gmm_params
+from lib.utils import knn, get_graph_feature, sinkhorn, cos_similarity, gmm_params, og_params
 
 
 class CONV(nn.Module):
@@ -39,38 +39,35 @@ class CONV(nn.Module):
 
 
 class GMMSVD(nn.Module):
-    def __init__(self, is_bin=False):
+    def __init__(self, is_sk=False):
         super().__init__()
-        self.is_bin = is_bin
-        bin_score = torch.nn.Parameter(torch.tensor(1.))
-        self.register_parameter('bin_score', bin_score)
+        self.is_sk = is_sk
 
-    def forward(self, src, tgt, src_desc, tgt_desc, src_log_gamma=None, tgt_log_gamma=None, is_bid=True):
+    def forward(self, src, tgt, src_desc, tgt_desc, src_log_gamma=None, tgt_log_gamma=None, src_o=None, tgt_o=None):
         src_gamma = F.softmax(src_log_gamma, dim=1)  # [b,k,n]
         tgt_gamma = F.softmax(tgt_log_gamma, dim=1)
-        src_mu = gmm_params(src_gamma.transpose(-1, -2), src.transpose(-1, -2)).transpose(-1, -2)
-        tgt_mu = gmm_params(tgt_gamma.transpose(-1, -2), tgt.transpose(-1, -2)).transpose(-1, -2)
-        src_desc_mu = gmm_params(src_gamma.transpose(-1, -2), src_desc.transpose(-1, -2)).transpose(-1, -2)
-        tgt_desc_mu = gmm_params(tgt_gamma.transpose(-1, -2), tgt_desc.transpose(-1, -2)).transpose(-1, -2)
+        src_pi, src_mu, src_desc_mu = og_params(src.transpose(-1, -2), src_gamma.transpose(-1, -2), src_o, src_desc)
+        tgt_pi, tgt_mu, tgt_desc_mu = og_params(tgt.transpose(-1, -2), tgt_gamma.transpose(-1, -2), tgt_o, tgt_desc)
+        src_desc_L = src_desc_mu[:, :, -1].detach()
+        tgt_desc_L = tgt_desc_mu[:, :, -1].detach()
+        src_desc_mu[:, :, -1] = tgt_desc_L
+        tgt_desc_mu[:, :, -1] = src_desc_L
+        ############################################################
         batch_size, num_points_tgt, _ = tgt_mu.size()
         batch_size, num_points, _ = src_desc_mu.size()
         similarity = cos_similarity(src_desc_mu, tgt_desc_mu)  # [b, n, m]
         # point-wise matching map
-        src_scores = torch.softmax(similarity / 0.05, dim=2)  # [b, n, m]  Eq. (1)
+        if self.is_sk:
+            cost = 1.0 - similarity
+            scores = sinkhorn(cost, p=src_pi, q=tgt_pi, epsilon=1e-2, thresh=1e-2, max_iter=30)[0]
+            src_scores = num_points_tgt * scores
+        else:
+            src_scores = torch.softmax(similarity / 0.05, dim=2)  # [b, n, m]  Eq. (1)
 
         src_corr = torch.einsum('bmd,bnm->bdn', tgt_mu, src_scores)  # [b,d,n] Eq. (4)
         # compute rigid transformation
         weight = src_scores.sum(dim=-1).unsqueeze(1)
         R, t = compute_rigid_transformation(src_mu.transpose(-1, -2), src_corr, weight)
-        if is_bid:
-            if self.is_bin:
-                qi = similarity.sum(dim=1, keepdim=True).clip(min=1e-5)  # [b, 1, m]
-                tgt_scores = similarity / qi
-            else:
-                tgt_scores = torch.softmax(similarity.transpose(-1, -2) / 0.1, dim=2)  # [b, n, m]  Eq. (1)
-            tgt_corr = torch.einsum('bnd,bmn->bdm', src_mu, tgt_scores)
-            return [R, t.view(batch_size, 3), src_corr.transpose(-1, -2), src_scores,
-                    tgt_corr.transpose(-1, -2), tgt_scores]
 
         return R, t.view(batch_size, 3), src_corr.transpose(-1, -2), src_scores
 

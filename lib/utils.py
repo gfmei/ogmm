@@ -149,6 +149,24 @@ def gmm_params(gamma, pts, return_sigma=False):
     return pi, mu
 
 
+def og_params(pts, gamma, o_score=None, feature=None):
+    if o_score is not None:
+        # score [B, N]
+        gamma_ex = (1.0 - o_score)
+        # score [B, N, 1]
+        gamma_ex = gamma_ex.unsqueeze(-1)
+        # score [B, N, J]
+        score = torch.cat([torch.einsum('bnk,bn->bnk', gamma, o_score), gamma_ex], dim=-1)
+    else:
+        score = gamma
+    # mu: B x J x 3
+    pi, mu = gmm_params(score, pts)
+    if feature is not None:
+        fea_mu = gmm_params(score, feature)
+        return pi, mu, fea_mu
+    return pi, mu
+
+
 def farthest_point_sample(xyz, npoint, is_center=False):
     """
     Input:
