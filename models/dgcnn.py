@@ -10,7 +10,7 @@ from torch import nn
 import torch.nn.functional as F
 
 from lib.se3 import compute_rigid_transformation
-from lib.utils import knn, get_graph_feature, sinkhorn, cos_similarity, gmm_params, og_params
+from lib.utils import knn, get_graph_feature, sinkhorn, cos_similarity, og_params
 
 
 class CONV(nn.Module):
@@ -39,7 +39,7 @@ class CONV(nn.Module):
 
 
 class GMMSVD(nn.Module):
-    def __init__(self, is_sk=False):
+    def __init__(self, is_sk=True):
         super().__init__()
         self.is_sk = is_sk
 
@@ -48,26 +48,28 @@ class GMMSVD(nn.Module):
         tgt_gamma = F.softmax(tgt_log_gamma, dim=1)
         src_pi, src_mu, src_desc_mu = og_params(src.transpose(-1, -2), src_gamma.transpose(-1, -2), src_o, src_desc)
         tgt_pi, tgt_mu, tgt_desc_mu = og_params(tgt.transpose(-1, -2), tgt_gamma.transpose(-1, -2), tgt_o, tgt_desc)
-        src_desc_L = src_desc_mu[:, :, -1].detach()
-        tgt_desc_L = tgt_desc_mu[:, :, -1].detach()
-        src_desc_mu[:, :, -1] = tgt_desc_L
-        tgt_desc_mu[:, :, -1] = src_desc_L
+        src_desc_l = src_desc_mu[:, :, -1].detach()
+        tgt_desc_l = tgt_desc_mu[:, :, -1].detach()
+        src_desc_mu[:, :, -1] = tgt_desc_l
+        tgt_desc_mu[:, :, -1] = src_desc_l
         ############################################################
         batch_size, num_points_tgt, _ = tgt_mu.size()
         batch_size, num_points, _ = src_desc_mu.size()
-        similarity = cos_similarity(src_desc_mu, tgt_desc_mu)  # [b, n, m]
+        similarity = cos_similarity(src_desc_mu, tgt_desc_mu)  # [b, n+1, m+1]
         # point-wise matching map
         if self.is_sk:
             cost = 1.0 - similarity
             scores = sinkhorn(cost, p=src_pi, q=tgt_pi, epsilon=1e-2, thresh=1e-2, max_iter=30)[0]
-            src_scores = num_points_tgt * scores
+            src_scores = scores[:, :-1, :-1]
+            pi = torch.sum(src_scores, dim=-1, keepdim=True).clip(min=1e-4)
+            src_scores = src_scores / pi
         else:
-            src_scores = torch.softmax(similarity / 0.05, dim=2)  # [b, n, m]  Eq. (1)
+            src_scores = torch.softmax(similarity[:, :-1, :-1] / 0.05, dim=2)  # [b, n, m]  Eq. (1)
 
-        src_corr = torch.einsum('bmd,bnm->bdn', tgt_mu, src_scores)  # [b,d,n] Eq. (4)
+        src_corr = torch.einsum('bmd,bnm->bdn', tgt_mu[:, :-1, :], src_scores)  # [b,d,n] Eq. (4)
         # compute rigid transformation
         weight = src_scores.sum(dim=-1).unsqueeze(1)
-        R, t = compute_rigid_transformation(src_mu.transpose(-1, -2), src_corr, weight)
+        R, t = compute_rigid_transformation(src_mu[:, :-1, :].transpose(-1, -2), src_corr, weight)
 
         return R, t.view(batch_size, 3), src_corr.transpose(-1, -2), src_scores
 
