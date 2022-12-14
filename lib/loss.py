@@ -82,3 +82,26 @@ class CluLoss(nn.Module):
         feats_anchor = get_local_corrs(xyz.transpose(-1, -2), xyz_mu.transpose(-1, -2), feats.transpose(-1, -2))
         loss = self.loss(feats_anchor, feats_pos)
         return loss
+
+
+def dcp_loss(rot_pred, rot_gt, transl_pred, transl_gt):
+    batch_size = transl_gt.shape[0]
+    transl_gt, transl_pred = transl_gt.view(batch_size, 3), transl_pred.view(batch_size, 3)
+    identity = torch.eye(3).to(rot_pred).unsqueeze(0).repeat(batch_size, 1, 1)
+    loss = F.mse_loss(torch.matmul(rot_pred.transpose(2, 1), rot_gt), identity) + F.mse_loss(transl_pred, transl_gt)
+    return loss
+
+
+def get_weighted_bce_loss(prediction, gt):
+    loss = nn.BCELoss(reduction='none')
+    class_loss = loss(prediction, gt)
+
+    weights = torch.ones_like(gt)
+    w_negative = gt.sum() / gt.size(0)
+    w_positive = 1 - w_negative
+
+    weights[gt >= 0.5] = w_positive
+    weights[gt < 0.5] = w_negative
+    w_class_loss = torch.mean(weights * class_loss)
+
+    return w_class_loss

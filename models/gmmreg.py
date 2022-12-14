@@ -49,7 +49,7 @@ class GMMReg(nn.Module):
         # feats_anchor = get_local_corrs(xyz, xyz_mu, feats).transpose(-1, -2)
         src_feats_pos = gmm_params(src_gamma, src_feats_t.transpose(-1, -2))[1].transpose(-1, -2)
         tgt_feats_pos = gmm_params(tgt_gamma, tgt_feats_t.transpose(-1, -2))[1].transpose(-1, -2)
-        src_feats_t = self.sattn(src_feats_t, tgt_feats_pos)
+        src_feats_t = self.cattn(src_feats_t, tgt_feats_pos)
         tgt_feats_t = self.cattn(tgt_feats_t, src_feats_pos)
         src_feats = src_feats + src_feats_t
         tgt_feats = tgt_feats + tgt_feats_t

@@ -18,8 +18,8 @@ from tqdm import tqdm
 
 from configs.cfgs import mnet
 from datasets.dataloader import data_loader
-from lib.metric import rotation_error, translation_error, dcp_metrics, summarize_metrics, save_model, \
-    _init_
+from lib.loss import dcp_loss, get_weighted_bce_loss
+from lib.metric import rotation_error, translation_error, dcp_metrics, summarize_metrics, save_model, _init_
 from lib.se3 import decompose_trans
 from models.gmmreg import GMMReg
 
@@ -51,11 +51,17 @@ def train_one_epoch(epoch, model, loader, optimizer, logger, checkpoint_path):
         pts2 = pts2.transpose(-1, -2)
         data_time.append(time() - start)
         optimizer.zero_grad()
-        loss, trans_pred = model(pts1, pts2, transf_gt, src_overlap, tgt_overlap)
+        rot_gt, trans_gt = decompose_trans(transf_gt)
+        batch_size = transf_gt.shape[0]
+        rot_gt, trans_gt = trans_gt.view(batch_size, 3), trans_gt.view(batch_size, 3)
+        rot, trans, src_o, tgt_o, clu_loss = model(pts1, pts2)
+        o_pred = torch.cat([src_o, tgt_o], dim=-1)
+        o_gt = torch.cat([src_overlap, tgt_overlap], dim=-1)
         if torch.cuda.device_count() > 1:
-            loss = loss.sum()
-        r_err = rotation_error(trans_pred[:, :3, :3], transf_gt[:, :3, :3])
-        t_err = translation_error(trans_pred[:, :3, 3], transf_gt[:, :3, 3])
+            clu_loss = clu_loss.sum()
+        r_err = rotation_error(rot, rot_gt)
+        t_err = translation_error(trans, trans_gt)
+        loss = dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(o_pred, o_gt)
         loss.backward()
         optimizer.step()
         batch_time.append(time() - start)
@@ -63,16 +69,11 @@ def train_one_epoch(epoch, model, loader, optimizer, logger, checkpoint_path):
         losses.append(loss.item())
         r_errs.append(r_err.mean().item())
         t_errs.append(t_err.mean().item())
-        rot_pred, transl_pred = decompose_trans(trans_pred)
-        rotransf_gt, transl_gt = decompose_trans(transf_gt)
-        batch_size = transl_gt.shape[0]
-        transl_gt, transl_pred = transl_gt.view(batch_size, 3), transl_pred.view(batch_size, 3)
         src, tgt = pts1[:, :3, :], pts2[:, :3, :]
-        perform_metrics = dcp_metrics(src.transpose(-1, -2), tgt.transpose(-1, -2),
-                                      rotransf_gt, transl_gt, rot_pred, transl_pred)
+        perform_metrics = dcp_metrics(src.transpose(-1, -2), tgt.transpose(-1, -2), rot_gt, trans_gt, rot, trans)
         for k in perform_metrics:
             all_train_metrics_np[k].append(perform_metrics[k])
-        all_train_metrics_np['loss'].append(np.repeat(loss.item(), 4))
+        all_train_metrics_np['loss'].append(np.repeat(clu_loss.item(), 4))
 
     all_train_metrics_np = {k: np.concatenate(all_train_metrics_np[k]) for k in all_train_metrics_np}
     summary_metrics = summarize_metrics(all_train_metrics_np)
@@ -118,28 +119,27 @@ def eval_one_epoch(epoch, model, loader, logger):
             transf_gt = transf_gt.cuda()
         pts1 = pts1.transpose(-1, -2)
         pts2 = pts2.transpose(-1, -2)
+        rot_gt, trans_gt = decompose_trans(transf_gt)
         data_time.append(time() - start)
         with torch.no_grad():
-            loss, trans_pred = model(pts1, pts2, transf_gt, src_overlap, tgt_overlap, is_test=True)
-            r_err = rotation_error(trans_pred[:, :3, :3], transf_gt[:, :3, :3])
-            t_err = translation_error(trans_pred[:, :3, 3], transf_gt[:, :3, 3])
+            batch_size = transf_gt.shape[0]
+            rot_gt, trans_gt = trans_gt.view(batch_size, 3), trans_gt.view(batch_size, 3)
+            rot, trans, src_o, tgt_o, clu_loss = model(pts1, pts2)
             batch_time.append(time() - start)
-        if torch.cuda.device_count() > 1:
-            loss = loss.sum()
-
-        losses.append(loss.item())
-        r_errs.append(r_err.mean().item())
-        t_errs.append(t_err.mean().item())
-        start = time()
-        rot_pred, transl_pred = decompose_trans(trans_pred)
-        rot_gt, transl_gt = decompose_trans(transf_gt)
-        batch_size = transl_gt.shape[0]
-        transl_gt, transl_pred = transl_gt.view(batch_size, 3), transl_pred.view(batch_size, 3)
-        src, tgt = pts1[:, :3, :], pts2[:, :3, :]
+            o_pred = torch.cat([src_o, tgt_o], dim=-1)
+            o_gt = torch.cat([src_overlap, tgt_overlap], dim=-1)
+            if torch.cuda.device_count() > 1:
+                clu_loss = clu_loss.sum()
+            r_err = rotation_error(rot, rot_gt)
+            t_err = translation_error(trans, trans_gt)
+            loss = dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(o_pred, o_gt)
+            # training accuracy statistic
+            losses.append(loss.item())
+            r_errs.append(r_err.mean().item())
+            t_errs.append(t_err.mean().item())
+            src, tgt = pts1[:, :3, :], pts2[:, :3, :]
+            perform_metrics = dcp_metrics(src.transpose(-1, -2), tgt.transpose(-1, -2), rot_gt, trans_gt, rot, trans)
         batch_cur_size = src.size(0)
-        perform_metrics = dcp_metrics(src.transpose(-1, -2), tgt.transpose(-1, -2), rot_gt, transl_gt,
-                                      rot_pred, transl_pred)
-
         for k in perform_metrics:
             all_val_metrics_np[k].append(perform_metrics[k])
             all_val_metrics_np['loss'].append(np.repeat(loss.item(), 4))
