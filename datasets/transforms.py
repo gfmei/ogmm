@@ -8,10 +8,9 @@
 import math
 from typing import List, Dict
 
+import numpy as np
 import torch
 import torch.utils.data
-import numpy as np
-
 from scipy.spatial.distance import minkowski
 from scipy.spatial.transform import Rotation
 from scipy.stats import special_ortho_group
@@ -155,6 +154,7 @@ class RandomTransformSE3_euler(RandomTransformSE3):
     This transformation is consistent to Deep Closest Point but does not
     generate uniform rotations
     """
+
     def generate_transform(self):
 
         if self._random_mag:

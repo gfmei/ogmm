@@ -6,8 +6,8 @@
 # @File    : loss.py
 # @Software: PyCharm
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 from lib.utils import wkeans, gmm_params, contrastsk, get_local_corrs
 
@@ -79,6 +79,6 @@ class CluLoss(nn.Module):
 
     def forward(self, xyz, xyz_mu, feats, gamma):
         feats_pos = gmm_params(gamma, feats.transpose(-1, -2))[1]
-        feats_anchor = get_local_corrs(xyz.transpose(-1, -2), xyz_mu.transpose(-1, -2),  feats.transpose(-1, -2))
+        feats_anchor = get_local_corrs(xyz.transpose(-1, -2), xyz_mu.transpose(-1, -2), feats.transpose(-1, -2))
         loss = self.loss(feats_anchor, feats_pos)
         return loss

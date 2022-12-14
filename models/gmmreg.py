@@ -6,8 +6,8 @@
 # @File    : gmmreg.py
 # @Software: PyCharm
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 from lib.loss import CluLoss
 from lib.o3dutils import integrate_trans, reg_solver
@@ -74,7 +74,7 @@ class GMMReg(nn.Module):
             src, tgt, src_feats, tgt_feats, src_log_scores, tgt_log_scores, src_o, tgt_o)
         # iv_transf = soft_svd(tgt_mu_xyz, src_mu_xyz, tgt_mu_feats, src_mu_feats)
         # self.crsloss(tgt_mu, src_mu, tgt_log_scores, src_log_scores, iv_transf[0], iv_transf[1])
-        clu_loss = 0.5*(src_clu_loss + tgt_clu_loss)
+        clu_loss = 0.5 * (src_clu_loss + tgt_clu_loss)
         # we_loss = self.we_loss(tgt_mu_xyz, soft_tgt_mu)
         # + self.we_loss(
         #     src_mu, soft_src, src_scores.transpose(-1, -2))

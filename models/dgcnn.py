@@ -6,8 +6,8 @@
 # @File    : dgcnn.py
 # @Software: PyCharm
 import torch
-from torch import nn
 import torch.nn.functional as F
+from torch import nn
 
 from lib.se3 import compute_rigid_transformation
 from lib.utils import knn, get_graph_feature, sinkhorn, cos_similarity, og_params

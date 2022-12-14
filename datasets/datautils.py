@@ -15,9 +15,9 @@ from typing import List
 import h5py
 import numpy as np
 import torch
+from scipy.spatial import cKDTree
 from scipy.spatial.transform import Rotation
 from sklearn.neighbors import NearestNeighbors
-from scipy.spatial import cKDTree
 
 
 def nearest_neighbor(src, dst):

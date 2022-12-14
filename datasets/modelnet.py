@@ -10,13 +10,12 @@ from typing import List
 
 import numpy as np
 import torch
-
-import datasets.transforms as Transforms
 from torch.utils.data import Dataset
 
+import datasets.transforms as Transforms
 from datasets.datautils import RandomCrop, farthest_point_sample, load_data, get_rri
-from lib.o3dutils import overlap_labels
 from datasets.transforms import jitter_pcd, random_pose
+from lib.o3dutils import overlap_labels
 from lib.se3 import np_mat2quat
 
 
