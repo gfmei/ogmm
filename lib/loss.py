@@ -99,9 +99,11 @@ def get_weighted_bce_loss(prediction, gt):
     weights = torch.ones_like(gt).to(gt)
     w_negative = gt.sum() / gt.size(0)
     w_positive = 1 - w_negative
-
-    weights[gt >= 0.5] = w_positive
-    weights[gt < 0.5] = w_negative
-    w_class_loss = torch.mean(weights * class_loss)
+    try:
+        weights[gt >= 0.5] = w_positive
+        weights[gt < 0.5] = w_negative
+        w_class_loss = torch.mean(weights * class_loss)
+    except Exception as e:
+        w_class_loss = torch.mean(class_loss)
 
     return w_class_loss

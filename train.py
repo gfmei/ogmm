@@ -132,7 +132,10 @@ def eval_one_epoch(epoch, model, loader, logger):
                 clu_loss = clu_loss.sum()
             r_err = rotation_error(rot, rot_gt)
             t_err = translation_error(trans, trans_gt)
-            loss = dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(o_pred, o_gt)
+            try:
+                loss = dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(o_pred, o_gt)
+            except Exception as e:
+                loss = dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss
             # training accuracy statistic
             losses.append(loss.item())
             r_errs.append(r_err.mean().item())
