@@ -31,7 +31,7 @@ def mnet():
                         help='Head to use, [mlp, svd]')
     parser.add_argument('--emb_dims', type=int, default=256, metavar='N', help='Dimension of embeddings')
     parser.add_argument('--dim', type=int, default=16, metavar='N', help='Dimension of embeddings')
-    parser.add_argument('--n_clusters', type=int, default=64, metavar='N', help='Number of clusters')
+    parser.add_argument('--n_clusters', type=int, default=24, metavar='N', help='Number of clusters')
     parser.add_argument('--n_blocks', type=int, default=1, metavar='N', help='Num of blocks of encoder&decoder')
     parser.add_argument('--num_heads', type=int, default=4, metavar='N', help='Num of heads in multi_headed_attention')
     parser.add_argument('--ff_dims', type=int, default=1024, metavar='N', help='Num of dimensions of fc in transformer')

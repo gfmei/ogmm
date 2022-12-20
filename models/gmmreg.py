@@ -37,9 +37,9 @@ class GMMReg(nn.Module):
         src_feats = self.emd(src)
         tgt_feats = self.emd(tgt)
         src_feats_anchor, src_feats_pos, src_gamma, src_pi, src_xyz_mu = get_anchor_corrs(
-            src, src_feats, self.n_clusters, dst='eu', iters=10, is_fast=True)
+            src, src_feats, 72, dst='eu', iters=10, is_fast=True)
         tgt_feats_anchor, tgt_feats_pos, tgt_gamma, tgt_pi, tgt_xyz_mu = get_anchor_corrs(
-            tgt, tgt_feats, self.n_clusters, dst='eu', iters=10, is_fast=True)
+            tgt, tgt_feats, 72, dst='eu', iters=10, is_fast=True)
         src_pos = self.pos(src, 5)
         tgt_pos = self.pos(tgt, 5)
         src_feats_t = src_feats + src_pos
