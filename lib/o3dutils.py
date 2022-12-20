@@ -197,6 +197,7 @@ def reg_solver(src, tgt, voxel_size=0.05, trans_init=None):
     """
     bs = src.shape[0]
     rot, transl = [], []
+    src, tgt = src.transpose(-1, -2), tgt.transpose(-1, -2)
     for i in range(len(src)):
         src_i = src[i].detach().cpu().numpy()
         tgt_i = tgt[i].detach().cpu().numpy()

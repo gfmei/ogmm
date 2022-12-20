@@ -57,6 +57,8 @@ def train_one_epoch(epoch, model, loader, optimizer, logger, checkpoint_path):
         rot, trans, src_o, tgt_o, clu_loss = model(pts1, pts2)
         o_pred = torch.cat([src_o, tgt_o], dim=-1)
         o_gt = torch.cat([src_overlap, tgt_overlap], dim=-1)
+        o_pred, o_gt = torch.nan_to_num(o_pred, nan=0.0), torch.nan_to_num(o_gt, nan=0.0)
+        assert o_pred.shape == o_gt.shape
         if torch.cuda.device_count() > 1:
             clu_loss = clu_loss.sum()
         r_err = rotation_error(rot, rot_gt)
@@ -127,7 +129,7 @@ def eval_one_epoch(epoch, model, loader, logger):
         with torch.no_grad():
             batch_size = transf_gt.shape[0]
             trans_gt = trans_gt.view(batch_size, 3)
-            rot, trans, src_o, tgt_o, clu_loss = model(pts1, pts2)
+            rot, trans, src_o, tgt_o, clu_loss = model(pts1, pts2, True)
             batch_time.append(time() - start)
             o_pred = torch.cat([src_o, tgt_o], dim=-1)
             o_gt = torch.cat([src_overlap, tgt_overlap], dim=-1)
@@ -136,9 +138,9 @@ def eval_one_epoch(epoch, model, loader, logger):
             r_err = rotation_error(rot, rot_gt)
             t_err = translation_error(trans, trans_gt)
             try:
-                loss = dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(o_pred, o_gt)
-            except Exception as e:
                 loss = dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss
+            except Exception as e:
+                loss = dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(o_pred, o_gt)
             # training accuracy statistic
             losses.append(loss.item())
             r_errs.append(r_err.mean().item())
