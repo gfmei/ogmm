@@ -61,7 +61,10 @@ def train_one_epoch(epoch, model, loader, optimizer, logger, checkpoint_path):
             clu_loss = clu_loss.sum()
         r_err = rotation_error(rot, rot_gt)
         t_err = translation_error(trans, trans_gt)
-        loss = dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(o_pred, o_gt)
+        try:
+            loss = dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss
+        except Exception as e:
+            loss = dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(o_pred, o_gt)
         loss.backward()
         optimizer.step()
         batch_time.append(time() - start)
