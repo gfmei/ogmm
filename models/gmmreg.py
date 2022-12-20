@@ -20,9 +20,9 @@ class GMMReg(nn.Module):
     def __init__(self, emb_dims, n_clusters, config):
         super().__init__()
         self.emd = DGCNN(emb_dims, config.gnn_k)
-        self.overlap = CONV(in_size=self.emb_dims + 1, out_size=1, hidden_size=self.emb_dims // 2, used='proj')
+        self.overlap = CONV(in_size=emb_dims + 1, out_size=1, hidden_size=emb_dims // 2, used='proj')
         self.n_clusters = n_clusters
-        self.cluster = CONV(in_size=self.emb_dims, out_size=n_clusters, hidden_size=self.emb_dims // 2, used='proj')
+        self.cluster = CONV(in_size=emb_dims, out_size=n_clusters, hidden_size=emb_dims // 2, used='proj')
         self.soft_svd = GMMSVD(False)
         self.pos = PositionEncoding(emb_dims)
         self.sattn = Transformer(emb_dims, config.num_heads)
@@ -60,14 +60,14 @@ class GMMReg(nn.Module):
         src_co = similarity.max(dim=2)[0].unsqueeze(1)
         tgt_co = similarity.max(dim=1)[0].unsqueeze(1)
         # [B, 1, N]
-        src_o = torch.sigmoid(self.overlap(torch.cat([src_feats, src_co], dim=1)) / 0.1)
-        tgt_o = torch.sigmoid(self.overlap(torch.cat([tgt_feats, tgt_co], dim=1)) / 0.1)
+        src_o = torch.sigmoid(self.overlap(torch.cat([src_feats, src_co], dim=1)) / 0.1).view(batch_size, -1)
+        tgt_o = torch.sigmoid(self.overlap(torch.cat([tgt_feats, tgt_co], dim=1)) / 0.1).view(batch_size, -1)
 
         src_log_scores = self.cluster(src_feats)
         tgt_log_scores = self.cluster(tgt_feats)
 
-        src_clu_loss = self.cluloss(src, src_xyz_mu, src_feats, src_gamma)[1]
-        tgt_clu_loss = self.cluloss(tgt, tgt_xyz_mu, tgt_feats, tgt_gamma)[1]
+        src_clu_loss = self.cluloss(src, src_xyz_mu, src_feats, src_gamma)
+        tgt_clu_loss = self.cluloss(tgt, tgt_xyz_mu, tgt_feats, tgt_gamma)
         # rot, trans, soft_tgt, soft_src_scores, soft_src, soft_tgt_scores = self.soft_svd(
         # src_mu, tgt_mu, src_feats, tgt_feats)
         rot, trans, soft_corr_mu, soft_mu_scores = self.soft_svd(

@@ -46,8 +46,10 @@ class GMMSVD(nn.Module):
     def forward(self, src, tgt, src_desc, tgt_desc, src_log_gamma=None, tgt_log_gamma=None, src_o=None, tgt_o=None):
         src_gamma = F.softmax(src_log_gamma, dim=1)  # [b,k,n]
         tgt_gamma = F.softmax(tgt_log_gamma, dim=1)
-        src_pi, src_mu, src_desc_mu = og_params(src.transpose(-1, -2), src_gamma.transpose(-1, -2), src_o, src_desc)
-        tgt_pi, tgt_mu, tgt_desc_mu = og_params(tgt.transpose(-1, -2), tgt_gamma.transpose(-1, -2), tgt_o, tgt_desc)
+        src_pi, src_mu, src_desc_mu = og_params(
+            src.transpose(-1, -2), src_gamma.transpose(-1, -2), src_o, src_desc.transpose(-1, -2))
+        tgt_pi, tgt_mu, tgt_desc_mu = og_params(
+            tgt.transpose(-1, -2), tgt_gamma.transpose(-1, -2), tgt_o, tgt_desc.transpose(-1, -2))
         src_desc_l = src_desc_mu[:, :, -1].detach()
         tgt_desc_l = tgt_desc_mu[:, :, -1].detach()
         src_desc_mu[:, :, -1] = tgt_desc_l

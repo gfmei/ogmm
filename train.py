@@ -53,7 +53,7 @@ def train_one_epoch(epoch, model, loader, optimizer, logger, checkpoint_path):
         optimizer.zero_grad()
         rot_gt, trans_gt = decompose_trans(transf_gt)
         batch_size = transf_gt.shape[0]
-        rot_gt, trans_gt = trans_gt.view(batch_size, 3), trans_gt.view(batch_size, 3)
+        trans_gt = trans_gt.view(batch_size, 3)
         rot, trans, src_o, tgt_o, clu_loss = model(pts1, pts2)
         o_pred = torch.cat([src_o, tgt_o], dim=-1)
         o_gt = torch.cat([src_overlap, tgt_overlap], dim=-1)

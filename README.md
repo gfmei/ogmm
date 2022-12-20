@@ -1,6 +1,7 @@
 ## Overlap-guided Gaussian Mixture Models for Point Cloud Registration
 
 ### Intorduction
+Now it is a draft version, we will update it as soon as possible.
 If you find our work useful, please consider citing our paper:
 ```
 @inproceedings{mei2022overlap,

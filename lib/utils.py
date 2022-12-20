@@ -162,7 +162,7 @@ def og_params(pts, gamma, o_score=None, feature=None):
     # mu: B x J x 3
     pi, mu = gmm_params(score, pts)
     if feature is not None:
-        fea_mu = gmm_params(score, feature)
+        fea_mu = gmm_params(score, feature)[1]
         return pi, mu, fea_mu
     return pi, mu
 

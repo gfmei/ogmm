@@ -24,8 +24,7 @@ def mnet():
     parser.add_argument('--overlap_radius', type=float, default=0.0375, metavar='N', help='')
 
     # model set
-    parser.add_argument('--model', type=str, default='CluReg', metavar='N', help='Model to use')
-    parser.add_argument('--emb_nn', type=str, default='dgcnn', metavar='N', choices=['dgcnn'], help='Encoder')
+    parser.add_argument('--model', type=str, default='GMMReg', metavar='N', help='Model to use')
     parser.add_argument('--attn', type=str, default='transformer', metavar='N', choices=['identity', 'transformer'],
                         help='Attention-based attn generator to use, [identity, transformer]')
     parser.add_argument('--head', type=str, default='svd', metavar='N', choices=['mlp', 'svd'],
@@ -34,10 +33,10 @@ def mnet():
     parser.add_argument('--dim', type=int, default=16, metavar='N', help='Dimension of embeddings')
     parser.add_argument('--n_clusters', type=int, default=64, metavar='N', help='Number of clusters')
     parser.add_argument('--n_blocks', type=int, default=1, metavar='N', help='Num of blocks of encoder&decoder')
-    parser.add_argument('--n_heads', type=int, default=4, metavar='N', help='Num of heads in multi_headed_attention')
+    parser.add_argument('--num_heads', type=int, default=4, metavar='N', help='Num of heads in multi_headed_attention')
     parser.add_argument('--ff_dims', type=int, default=1024, metavar='N', help='Num of dimensions of fc in transformer')
     parser.add_argument('--K', type=int, default=20, metavar='N', help='Num of neighbors to use for DGCNN')
-    parser.add_argument('--k', type=int, default=20, metavar='N', help='Num of neighbors to use for DGCNN')
+    parser.add_argument('--gnn_k', type=int, default=20, metavar='N', help='Num of neighbors to use for DGCNN')
     parser.add_argument('--tau', type=float, default=0.01, metavar='N', help='')
     parser.add_argument('--nn_margin', type=float, default=0.5, metavar='N', help='')
     parser.add_argument('--loss_margin', type=float, default=0.012, metavar='N', help='')
@@ -45,7 +44,7 @@ def mnet():
     parser.add_argument('--list_k1', type=list, default=[5, 5, 5], metavar='N', help='')
     parser.add_argument('--list_k2', type=list, default=[5, 5, 5], metavar='N', help='')
     # training set
-    parser.add_argument('--exp_name', type=str, default='RieNet', metavar='N', help='Name of the experiment')
+    parser.add_argument('--exp_name', type=str, default='GMMReg', metavar='N', help='Name of the experiment')
     parser.add_argument('--model_path', type=str, default='', metavar='N', help='Name of the experiment')
     parser.add_argument('--batch_size', type=int, default=32, metavar='batch_size', help='Size of batch)')
     parser.add_argument('--test_batch_size', type=int, default=24, metavar='batch_size', help='Size of batch)')
@@ -81,7 +80,7 @@ def indoor():
     parser.add_argument('--overlap_radius', type=float, default=0.0375, metavar='N', help='')
 
     # model set
-    parser.add_argument('--model', type=str, default='DeepGMR', metavar='N', help='Model to use')
+    parser.add_argument('--model', type=str, default='GMMReg', metavar='N', help='Model to use')
     parser.add_argument('--emb_nn', type=str, default='dgcnn', metavar='N', choices=['dgcnn'], help='Encoder')
     parser.add_argument('--attn', type=str, default='transformer', metavar='N', choices=['identity', 'transformer'],
                         help='Attention-based attn generator to use, [identity, transformer]')
@@ -105,7 +104,7 @@ def indoor():
     parser.add_argument('--k', type=int, default=20)
 
     # training set
-    parser.add_argument('--exp_name', type=str, default='rienet', metavar='N', help='Name of the experiment')
+    parser.add_argument('--exp_name', type=str, default='GMMReg', metavar='N', help='Name of the experiment')
     parser.add_argument('--model_path', type=str, default='', metavar='N', help='Name of the experiment')
     parser.add_argument('--batch_size', type=int, default=8, metavar='batch_size', help='Size of batch)')
     parser.add_argument('--test_batch_size', type=int, default=1, metavar='batch_size', help='Size of batch)')
