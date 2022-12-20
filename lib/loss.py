@@ -96,7 +96,7 @@ def get_weighted_bce_loss(prediction, gt):
     loss = nn.BCELoss(reduction='none')
     class_loss = loss(prediction, gt)
 
-    weights = torch.ones_like(gt)
+    weights = torch.ones_like(gt).to(gt)
     w_negative = gt.sum() / gt.size(0)
     w_positive = 1 - w_negative
 

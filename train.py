@@ -123,7 +123,7 @@ def eval_one_epoch(epoch, model, loader, logger):
         data_time.append(time() - start)
         with torch.no_grad():
             batch_size = transf_gt.shape[0]
-            rot_gt, trans_gt = trans_gt.view(batch_size, 3), trans_gt.view(batch_size, 3)
+            trans_gt = trans_gt.view(batch_size, 3)
             rot, trans, src_o, tgt_o, clu_loss = model(pts1, pts2)
             batch_time.append(time() - start)
             o_pred = torch.cat([src_o, tgt_o], dim=-1)
