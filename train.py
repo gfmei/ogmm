@@ -57,7 +57,7 @@ def train_one_epoch(epoch, model, loader, optimizer, logger, checkpoint_path):
         rot, trans, src_o, tgt_o, clu_loss = model(pts1, pts2)
         o_pred = torch.cat([src_o, tgt_o], dim=-1)
         o_gt = torch.cat([src_overlap, tgt_overlap], dim=-1)
-        o_pred, o_gt = torch.nan_to_num(o_pred, nan=0.0), torch.nan_to_num(o_gt, nan=0.0)
+        o_pred, o_gt = torch.nan_to_num(o_pred, nan=0.0).clip(min=0.0), torch.nan_to_num(o_gt, nan=0.0).clip(min=0.0)
         assert o_pred.shape == o_gt.shape
         if torch.cuda.device_count() > 1:
             clu_loss = clu_loss.sum()
