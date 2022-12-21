@@ -93,17 +93,17 @@ def dcp_loss(rot_pred, rot_gt, transl_pred, transl_gt):
 
 
 def get_weighted_bce_loss(prediction, gt):
-    loss = nn.BCELoss(reduction='none')
-    class_loss = loss(prediction, gt)
+    # loss = nn.BCELoss(reduction='none')
+    # class_loss = loss(prediction, gt)
+    #
+    # weights = torch.ones_like(gt).to(gt)
+    # w_negative = gt.sum() / gt.size(0)
+    # w_positive = 1 - w_negative
+    # try:
+    #     weights[gt >= 0.5] = w_positive
+    #     weights[gt < 0.5] = w_negative
+    #     w_class_loss = torch.mean(weights * class_loss)
+    # except Exception as e:
+    #     w_class_loss = torch.mean(class_loss)
 
-    weights = torch.ones_like(gt).to(gt)
-    w_negative = gt.sum() / gt.size(0)
-    w_positive = 1 - w_negative
-    try:
-        weights[gt >= 0.5] = w_positive
-        weights[gt < 0.5] = w_negative
-        w_class_loss = torch.mean(weights * class_loss)
-    except Exception as e:
-        w_class_loss = torch.mean(class_loss)
-
-    return w_class_loss
+    return F.mse_loss(prediction, gt)
