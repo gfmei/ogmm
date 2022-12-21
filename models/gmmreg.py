@@ -20,7 +20,8 @@ class GMMReg(nn.Module):
     def __init__(self, emb_dims, n_clusters, config):
         super().__init__()
         self.emd = DGCNN(emb_dims, config.gnn_k)
-        self.conv = CONV(in_size=emb_dims + 1, out_size=emb_dims, hidden_size=2*emb_dims, used='proj')
+        self.proj = CONV(in_size=emb_dims, out_size=1, hidden_size=emb_dims // 2, used=None)
+        self.conv = CONV(in_size=emb_dims + 2, out_size=emb_dims, hidden_size=2*emb_dims, used='proj')
         self.overlap = CONV(in_size=emb_dims, out_size=emb_dims + 1, hidden_size=emb_dims, used='proj')
         self.cluster = CONV(in_size=emb_dims, out_size=n_clusters, hidden_size=emb_dims // 2, used='proj')
         self.soft_svd = GMMSVD(True)
@@ -57,11 +58,14 @@ class GMMReg(nn.Module):
         # compute overlap scores
         src_fn, tgt_fn = F.normalize(src_feats), F.normalize(tgt_feats)
         similarity = torch.einsum('bdm,bdn->bmn', src_fn, tgt_fn)
-        src_co = similarity.max(dim=2)[0].unsqueeze(1)
-        tgt_co = similarity.max(dim=1)[0].unsqueeze(1)
+        src_o, tgt_o = self.proj(src_feats), self.proj(tgt_feats)
+        # src_co = similarity.max(dim=2)[0].unsqueeze(1)
+        # tgt_co = similarity.max(dim=1)[0].unsqueeze(1)
+        src_wo = torch.einsum('bmn,bdn->bdm', torch.softmax(similarity, dim=-1), src_o)
+        tgt_wo = torch.einsum('bmn,bdm->bdn', torch.softmax(similarity, dim=1), tgt_o)
         # [B, 1, N]
-        src_feats_o = torch.cat([src_feats, src_co], dim=1)
-        tgt_feats_o = torch.cat([tgt_feats, tgt_co], dim=1)
+        src_feats_o = torch.cat([src_feats, src_wo, src_o], dim=1)
+        tgt_feats_o = torch.cat([tgt_feats, tgt_wo, tgt_o], dim=1)
         src_feats_o, tgt_feats_o = self.conv(src_feats_o), self.conv(tgt_feats_o)
         src_feats_t = self.sattn2(src_feats_o, tgt_feats_o)
         tgt_feats_t = self.sattn2(tgt_feats_o, src_feats_o)
@@ -78,8 +82,6 @@ class GMMReg(nn.Module):
 
         src_clu_loss = self.cluloss(src, src_xyz_mu, src_feats, src_gamma)
         tgt_clu_loss = self.cluloss(tgt, tgt_xyz_mu, tgt_feats, tgt_gamma)
-        # rot, trans, soft_tgt, soft_src_scores, soft_src, soft_tgt_scores = self.soft_svd(
-        # src_mu, tgt_mu, src_feats, tgt_feats)
         rot, trans, soft_corr_mu, soft_mu_scores = self.soft_svd(
             src, tgt, src_feats, tgt_feats, src_log_scores, tgt_log_scores, src_o, tgt_o)
         # iv_transf = soft_svd(tgt_mu_xyz, src_mu_xyz, tgt_mu_feats, src_mu_feats)
@@ -88,7 +90,6 @@ class GMMReg(nn.Module):
         # we_loss = self.we_loss(tgt_mu_xyz, soft_tgt_mu)
         # + self.we_loss(
         #     src_mu, soft_src, src_scores.transpose(-1, -2))
-        # st_loss = gw_loss(src_mu_feats, tgt_mu_feats, src_mu_xyz, tgt_mu_xyz, src_pi, tgt_pi).clip(min=0.0)
         loss = clu_loss
         if is_test:
             trans_init = integrate_trans(rot, trans)
