@@ -312,12 +312,12 @@ class ModelNetHdf(Dataset):
 
         self.unseen = unseen
         self.data, self.labels = load_data(partition, root)
-        # if self.unseen and partition == 'test':
-        #     self.data = self.data[self.label >= 20]
-        #     self.label = self.label[self.label >= 20]
-        # else:
-        #     self.data = self.data[self.label < 20]
-        #     self.label = self.label[self.label < 20]
+        if self.unseen and partition == 'test':
+            self.data = self.data[self.label >= 20]
+            self.label = self.label[self.label >= 20]
+        else:
+            self.data = self.data[self.label < 20]
+            self.label = self.label[self.label < 20]
         self._transform = transform
 
     def __getitem__(self, item):
