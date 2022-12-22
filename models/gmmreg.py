@@ -25,7 +25,7 @@ class GMMReg(nn.Module):
         self.overlap = CONV(in_size=emb_dims, out_size=emb_dims + 1, hidden_size=emb_dims, used='proj')
         self.cluster = CONV(in_size=emb_dims, out_size=n_clusters, hidden_size=emb_dims // 2, used='proj')
         self.soft_svd = GMMSVD(True)
-        self.km_clusters = config.km_clusters
+        self.config = config
         self.pos = PositionEncoding(emb_dims)
         self.sattn1 = Transformer(emb_dims, config.num_heads)
         self.cattn = Transformer(emb_dims, config.num_heads)
@@ -40,9 +40,9 @@ class GMMReg(nn.Module):
         src_feats = self.emd(src)
         tgt_feats = self.emd(tgt)
         src_feats_anchor, src_feats_pos, src_gamma, src_pi, src_xyz_mu = get_anchor_corrs(
-            src, src_feats, self.km_clusters, dst='eu', iters=10, is_fast=True)
+            src, src_feats, self.config.km_clusters, dst='eu', iters=10, is_fast=True)
         tgt_feats_anchor, tgt_feats_pos, tgt_gamma, tgt_pi, tgt_xyz_mu = get_anchor_corrs(
-            tgt, tgt_feats, self.km_clusters, dst='eu', iters=10, is_fast=True)
+            tgt, tgt_feats, self.config.km_clusters, dst='eu', iters=10, is_fast=True)
         src_pos = self.pos(src, 5)
         tgt_pos = self.pos(tgt, 5)
         src_feats_t = src_feats + src_pos
@@ -82,13 +82,12 @@ class GMMReg(nn.Module):
 
         src_log_scores = self.cluster(src_feats)
         tgt_log_scores = self.cluster(tgt_feats)
-
-        src_clu_loss = self.cluloss(src, src_xyz_mu, src_feats, src_gamma)
-        tgt_clu_loss = self.cluloss(tgt, tgt_xyz_mu, tgt_feats, tgt_gamma)
         rot, trans, soft_corr_mu, soft_mu_scores = self.soft_svd(
             src, tgt, src_feats, tgt_feats, src_log_scores, tgt_log_scores, src_o, tgt_o)
         # iv_transf = soft_svd(tgt_mu_xyz, src_mu_xyz, tgt_mu_feats, src_mu_feats)
-        # self.crsloss(tgt_mu, src_mu, tgt_log_scores, src_log_scores, iv_transf[0], iv_transf[1])
+        # clustering-based loss
+        src_clu_loss = self.cluloss(src, src_xyz_mu, src_feats, src_gamma)
+        tgt_clu_loss = self.cluloss(tgt, tgt_xyz_mu, tgt_feats, tgt_gamma)
         clu_loss = 0.5 * (src_clu_loss + tgt_clu_loss)
         # we_loss = self.we_loss(tgt_mu_xyz, soft_tgt_mu)
         # + self.we_loss(
@@ -96,6 +95,6 @@ class GMMReg(nn.Module):
         loss = clu_loss
         if is_test:
             trans_init = integrate_trans(rot, trans)
-            rot, trans = reg_solver(src, tgt, voxel_size=0.02, trans_init=trans_init)
+            rot, trans = reg_solver(src, tgt, voxel_size=0.03, trans_init=trans_init)
 
         return rot, trans, src_o, tgt_o, loss
