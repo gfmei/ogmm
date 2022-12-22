@@ -29,9 +29,9 @@ def mnet():
                         help='Attention-based attn generator to use, [identity, transformer]')
     parser.add_argument('--head', type=str, default='svd', metavar='N', choices=['mlp', 'svd'],
                         help='Head to use, [mlp, svd]')
-    parser.add_argument('--emb_dims', type=int, default=256, metavar='N', help='Dimension of embeddings')
-    parser.add_argument('--dim', type=int, default=16, metavar='N', help='Dimension of embeddings')
-    parser.add_argument('--n_clusters', type=int, default=64, metavar='N', help='Number of clusters')
+    parser.add_argument('--emb_dims', type=int, default=512, metavar='N', help='Dimension of embeddings')
+    parser.add_argument('--km_clusters', type=int, default=16, metavar='N', help='Number of clusters for kmeans')
+    parser.add_argument('--n_clusters', type=int, default=72, metavar='N', help='Number of clusters')
     parser.add_argument('--n_blocks', type=int, default=1, metavar='N', help='Num of blocks of encoder&decoder')
     parser.add_argument('--num_heads', type=int, default=4, metavar='N', help='Num of heads in multi_headed_attention')
     parser.add_argument('--ff_dims', type=int, default=1024, metavar='N', help='Num of dimensions of fc in transformer')
@@ -44,7 +44,7 @@ def mnet():
     parser.add_argument('--list_k1', type=list, default=[5, 5, 5], metavar='N', help='')
     parser.add_argument('--list_k2', type=list, default=[5, 5, 5], metavar='N', help='')
     # training set
-    parser.add_argument('--exp_name', type=str, default='GMMReg64', metavar='N', help='Name of the experiment')
+    parser.add_argument('--exp_name', type=str, default='GMMReg', metavar='N', help='Name of the experiment')
     parser.add_argument('--model_path', type=str, default='', metavar='N', help='Name of the experiment')
     parser.add_argument('--batch_size', type=int, default=32, metavar='batch_size', help='Size of batch)')
     parser.add_argument('--test_batch_size', type=int, default=24, metavar='batch_size', help='Size of batch)')

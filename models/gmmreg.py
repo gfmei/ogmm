@@ -25,6 +25,7 @@ class GMMReg(nn.Module):
         self.overlap = CONV(in_size=emb_dims, out_size=emb_dims + 1, hidden_size=emb_dims, used='proj')
         self.cluster = CONV(in_size=emb_dims, out_size=n_clusters, hidden_size=emb_dims // 2, used='proj')
         self.soft_svd = GMMSVD(True)
+        self.km_clusters = config.km_clusters
         self.pos = PositionEncoding(emb_dims)
         self.sattn1 = Transformer(emb_dims, config.num_heads)
         self.cattn = Transformer(emb_dims, config.num_heads)
@@ -39,9 +40,9 @@ class GMMReg(nn.Module):
         src_feats = self.emd(src)
         tgt_feats = self.emd(tgt)
         src_feats_anchor, src_feats_pos, src_gamma, src_pi, src_xyz_mu = get_anchor_corrs(
-            src, src_feats, 72, dst='eu', iters=10, is_fast=True)
+            src, src_feats, self.km_clusters, dst='eu', iters=10, is_fast=True)
         tgt_feats_anchor, tgt_feats_pos, tgt_gamma, tgt_pi, tgt_xyz_mu = get_anchor_corrs(
-            tgt, tgt_feats, 72, dst='eu', iters=10, is_fast=True)
+            tgt, tgt_feats, self.km_clusters, dst='eu', iters=10, is_fast=True)
         src_pos = self.pos(src, 5)
         tgt_pos = self.pos(tgt, 5)
         src_feats_t = src_feats + src_pos
@@ -67,8 +68,10 @@ class GMMReg(nn.Module):
         src_feats_o = torch.cat([src_feats, src_wo, src_o], dim=1)
         tgt_feats_o = torch.cat([tgt_feats, tgt_wo, tgt_o], dim=1)
         src_feats_o, tgt_feats_o = self.conv(src_feats_o), self.conv(tgt_feats_o)
-        src_feats_t = self.sattn2(src_feats_o, tgt_feats_o)
-        tgt_feats_t = self.sattn2(tgt_feats_o, src_feats_o)
+        src_feats_pos = gmm_params(src_gamma, src_feats_o.transpose(-1, -2))[1].transpose(-1, -2)
+        tgt_feats_pos = gmm_params(tgt_gamma, tgt_feats_o.transpose(-1, -2))[1].transpose(-1, -2)
+        src_feats_t = self.sattn2(src_feats_o, src_feats_pos)
+        tgt_feats_t = self.sattn2(tgt_feats_o, tgt_feats_pos)
         src_feats = src_feats_o + src_feats_t
         tgt_feats = tgt_feats_o + tgt_feats_t
         src_feats_o, tgt_feats_o = self.overlap(src_feats), self.overlap(tgt_feats)
