@@ -272,7 +272,7 @@ def compute_rigid_transformation(src, src_corr, weight):
     cov = torch.matmul(src_centered * weight, src_corr_centered.transpose(2, 1).contiguous())
     eye = torch.eye(dim).to(src).repeat(bs, 1, 1)
     try:
-        cov = cov + 1e-5 * eye
+        cov = torch.nan_to_num(cov, nan=0.0) + 1e-5 * eye
         u, s, v = torch.svd(cov.cpu(), some=True, compute_uv=True)
     except Exception:
         cov = eye
