@@ -60,8 +60,9 @@ class GMMSVD(nn.Module):
         similarity = cos_similarity(src_desc_mu, tgt_desc_mu)  # [b, n+1, m+1]
         # point-wise matching map
         if self.is_sk:
-            cost = 1.0 - similarity
+            cost = 2.0*(1.0 - similarity)
             scores = sinkhorn(cost, p=src_pi, q=tgt_pi, epsilon=1e-2, thresh=1e-2, max_iter=30)[0]
+            scores = torch.nan_to_num(scores, 1e-4)
             src_scores = scores[:, :-1, :-1]
             pi = torch.sum(src_scores, dim=-1, keepdim=True).clip(min=1e-4)
             src_scores = src_scores / pi
