@@ -64,10 +64,10 @@ def train_one_epoch(epoch, model, loader, optimizer, logger, checkpoint_path):
         r_err = rotation_error(rot, rot_gt)
         t_err = translation_error(trans, trans_gt)
         try:
-            loss = 5*dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(o_pred, o_gt)
+            loss = dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(o_pred, o_gt)
             loss = torch.nan_to_num(loss, nan=0.0)
         except Exception as e:
-            loss = 5*dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss
+            loss = dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss
         loss.backward()
         optimizer.step()
         batch_time.append(time() - start)
@@ -139,9 +139,9 @@ def eval_one_epoch(epoch, model, loader, logger):
             r_err = rotation_error(rot, rot_gt)
             t_err = translation_error(trans, trans_gt)
             try:
-                loss = 5*dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(o_pred, o_gt)
+                loss = dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(o_pred, o_gt)
             except Exception as e:
-                loss = 5*dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss
+                loss = dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss
             # training accuracy statistic
             losses.append(loss.item())
             r_errs.append(r_err.mean().item())
