@@ -204,6 +204,7 @@ if __name__ == "__main__":
     optimal_rot = np.inf
     optimal_tra = np.inf
     optimal_ccd = np.inf
+    optimal_pcab = np.inf
     optimal_recall = -np.inf
     checkpoint_path = os.path.join(args.model_path, 'checkpoints/{}'.format(args.exp_name))
     optim_path = os.path.join(checkpoint_path, 'models/optim_model.pt')
@@ -216,9 +217,10 @@ if __name__ == "__main__":
     for epoch in range(args.epochs):
         train_metrics = train_one_epoch(epoch, model, train_loader, optimizer, logger, checkpoint_path)
         val_metrics = eval_one_epoch(epoch, model, test_loader, logger)
-        if optimal_recall < val_metrics['n_correct']:
+        if optimal_pcab > val_metrics['pcab_dist']:
             optimal_rot = val_metrics['r_mae']
             optimal_tra = val_metrics['t_mae']
+            optimal_pcab = val_metrics['pcab_dist']
             optimal_ccd = val_metrics['clip_chamfer_dist']
             optimal_recall = val_metrics['n_correct']
             save_model(model, optim_path)
