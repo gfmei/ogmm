@@ -95,6 +95,6 @@ class GMMReg(nn.Module):
         loss = clu_loss
         if is_test:
             trans_init = integrate_trans(rot, trans)
-            rot, trans = reg_solver(src, tgt, voxel_size=0.03, trans_init=trans_init)
+            rot, trans = reg_solver(src, tgt, voxel_size=self.config.overlap_radius, trans_init=trans_init)
 
         return rot, trans, src_o, tgt_o, loss
