@@ -92,6 +92,14 @@ def dcp_loss(rot_pred, rot_gt, transl_pred, transl_gt):
     return loss
 
 
+def con_loss(src_desc, tgt_desc, tau=0.1):
+    conloss = ConLoss(tau)
+    src_desc = src_desc.transpose(-1, -2)
+    tgt_desc = tgt_desc.transpose(-1, -2)
+    loss = conloss(src_desc, tgt_desc)
+    return loss
+
+
 def get_weighted_bce_loss(prediction, gt):
     # loss = nn.BCELoss(reduction='none')
     # class_loss = loss(prediction, gt)

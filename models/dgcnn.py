@@ -74,7 +74,7 @@ class GMMSVD(nn.Module):
         weight = src_scores.sum(dim=-1).unsqueeze(1)
         R, t = compute_rigid_transformation(src_mu[:, :-1, :].transpose(-1, -2), src_corr, weight)
 
-        return R, t.view(batch_size, 3), src_corr.transpose(-1, -2), src_scores
+        return R, t.view(batch_size, 3), src_corr, tgt_mu[:, :-1, :].transpose(-1, -2)
 
 
 class DGCNN(nn.Module):

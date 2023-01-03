@@ -21,7 +21,7 @@ def mnet():
     parser.add_argument('--n_points', type=int, default=717, metavar='N', help='Num of points to use')
     parser.add_argument('--partial', type=list, default=[0.70, 0.70], metavar='N', help='Whether to use tnet')
     parser.add_argument('--noise_type', type=str, default='crop', metavar='N', help='Whether to use tnet')
-    parser.add_argument('--overlap_radius', type=float, default=0.0375, metavar='N', help='')
+    parser.add_argument('--overlap_radius', type=float, default=0.035, metavar='N', help='')
 
     # model set
     parser.add_argument('--model', type=str, default='GMMReg', metavar='N', help='Model to use')
