@@ -39,9 +39,10 @@ class CONV(nn.Module):
 
 
 class GMMSVD(nn.Module):
-    def __init__(self, is_sk=True):
+    def __init__(self, is_sk=True, epsilon=1e-3):
         super().__init__()
         self.is_sk = is_sk
+        self.epsilon = epsilon
 
     def forward(self, src, tgt, src_desc, tgt_desc, src_log_gamma=None, tgt_log_gamma=None, src_o=None, tgt_o=None):
         src_gamma = F.softmax(src_log_gamma, dim=1)  # [b,k,n]
@@ -50,10 +51,19 @@ class GMMSVD(nn.Module):
             src.transpose(-1, -2), src_gamma.transpose(-1, -2), src_o, src_desc.transpose(-1, -2))
         tgt_pi, tgt_mu, tgt_desc_mu = og_params(
             tgt.transpose(-1, -2), tgt_gamma.transpose(-1, -2), tgt_o, tgt_desc.transpose(-1, -2))
+        ############################################################
+        # *****Deal with the points in the non-overlap regions ****#
         src_desc_l = src_desc_mu[:, :, -1].detach()
         tgt_desc_l = tgt_desc_mu[:, :, -1].detach()
         src_desc_mu[:, :, -1] = tgt_desc_l
         tgt_desc_mu[:, :, -1] = src_desc_l
+        # *****Deal with the case that source and target have different overlap ratios ****#
+        src_pi_l = 1.0 - src_pi[:, -1] + self.epsilon
+        tgt_pi_l = 1.0 - tgt_pi[:, -1] + self.epsilon
+        src_pi[:, -1] = self.epsilon
+        tgt_pi[:, -1] = self.epsilon
+        src_pi = src_pi / src_pi_l[:, None]
+        tgt_pi = tgt_pi / tgt_pi_l[:, None]
         ############################################################
         batch_size, num_points_tgt, _ = tgt_mu.size()
         batch_size, num_points, _ = src_desc_mu.size()
