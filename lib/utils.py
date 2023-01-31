@@ -206,7 +206,7 @@ def wkeans(x, num_clusters, dst='feats', iters=10, is_fast=True):
     else:
         ids = torch.randperm(num)[:num_clusters]
         centroids = x[:, ids, :]
-    gamma, pi, mu = torch.zeros((bs, num, num_clusters), requires_grad=True).to(x), None, None
+    gamma, pi = torch.zeros((bs, num, num_clusters), requires_grad=True).to(x), None
     for i in range(iters):
         if dst == 'eu':
             cost = square_distance(x, centroids)
@@ -215,8 +215,8 @@ def wkeans(x, num_clusters, dst='feats', iters=10, is_fast=True):
             centroids = F.normalize(centroids, p=2, dim=-1)
             cost = 2.0 - 2.0 * torch.einsum('bnd,bmd->bnm', x, centroids)
         gamma = num * sinkhorn(cost, max_iter=10)[0]
-        pi, mu = gmm_params(gamma, x)
-    return gamma, pi, mu
+        pi, centroids = gmm_params(gamma, x)
+    return gamma, pi, centroids
 
 
 def cos_similarity(x, y):
