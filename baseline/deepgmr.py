@@ -9,7 +9,6 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from lib.loss import dcp_loss
 from lib.o3dutils import reg_solver
 from lib.utils import gmm_params
 from models.dgcnn import DGCNN, CONV
@@ -27,7 +26,7 @@ def gmm_register(pi_s, mu_s, mu_t, sigma_t):
     c_t = pi_s.unsqueeze(1) @ mu_t
     Ms = torch.sum((pi_s.unsqueeze(2) * (mu_s - c_s)).unsqueeze(3) @
                    (mu_t - c_t).unsqueeze(2) @ sigma_t.inverse(), dim=1)
-    U, _, V = torch.svd(Ms.cpu())
+    U, _, V = torch.svd(torch.nan_to_num(Ms, nan=0).cpu()+1e-4)
     U = U.cuda()
     V = V.cuda()
     S = torch.eye(3).unsqueeze(0).repeat(U.shape[0], 1, 1).to(U.device)
