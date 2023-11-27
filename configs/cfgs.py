@@ -41,7 +41,7 @@ def mnet():
     parser.add_argument('--mu', type=float, default=0.1, metavar='N', help='')
     parser.add_argument('--nn_margin', type=float, default=0.5, metavar='N', help='')
     parser.add_argument('--loss_margin', type=float, default=0.012, metavar='N', help='')
-    parser.add_argument('--n_keypoints', type=int, default=256, metavar='N', help='')
+    parser.add_argument('--n_keypoints', type=int, default=512, metavar='N', help='')
     parser.add_argument('--list_k1', type=list, default=[5, 5, 5], metavar='N', help='')
     parser.add_argument('--list_k2', type=list, default=[5, 5, 5], metavar='N', help='')
     # training set
