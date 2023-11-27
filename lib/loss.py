@@ -58,48 +58,23 @@ class ConLoss(nn.Module):
 
 
 class KMLoss(nn.Module):
-    def __init__(self, tau=0.5):
+    def __init__(self, top_k=256):
         super().__init__()
-        self.loss = ConLoss(tau)
+        self.top_k = top_k
 
-    def forward(self, pts, feats, num_clusters):
-        gamma = wkeans(feats, num_clusters)[0]
-        pi, mu = gmm_params(gamma, pts)
+    def forward(self, pts, gamma, prob):
+        # gamma = wkeans(feats, num_clusters)[0]
+        topk_ids = torch.topk(prob, k=self.top_k)[1].unsqueeze(dim=-1)
+        score = torch.gather(gamma, index=topk_ids.expand(-1, -1, gamma.shape[-1]), dim=1)
+        pts = torch.gather(pts, index=topk_ids.expand(-1, -1, pts.shape[-1]), dim=1)
+        score = score / score.sum(dim=-1, keepdim=True).clip(min=1e-4)
+        pi, mu = gmm_params(score, pts)
         with torch.no_grad():
             # log_score, log_score [B,N,K], p, feats [b,d,k]
             assign, dis = contrastsk(pts, mu, max_iter=25, dst='eu')
             assign = assign / assign.sum(dim=-1, keepdim=True).clip(min=1e-4)  # [b, n, k]
-        loss = torch.mean(torch.sum(-(assign.detach() * torch.log(gamma.clip(min=1e-3))).clip(max=1.0), dim=1))
+        loss = torch.mean(torch.sum(-(assign.detach() * torch.log(score.clip(min=1e-3))).clip(max=1.0), dim=1))
         return loss
-
-
-class WelschLoss(nn.Module):
-    def __init__(self, alpha=1.0, top_k=128):
-        super().__init__()
-        self.alpha = alpha
-        self.top_k = top_k
-
-    def forward(self, src, tgt, src_feats=None, tgt_feats=None, src_o=None, tgt_o=None):
-        if src_feats is not None and tgt_feats is not None:
-            src_pi = src_o / src_o.sum(dim=-1, keepdims=True).clip(min=1e-4)
-            tgt_pi = tgt_o / tgt_o.sum(dim=-1, keepdims=True).clip(min=1e-4)
-            cost = torch.cdist(src_feats, tgt_feats)
-            gamma = sinkhorn(cost, p=src_pi, q=tgt_pi, epsilon=1e-3, thresh=1e-3, max_iter=20)[0]
-            src_corr = gamma @ tgt / gamma.sum(dim=-1, keepdims=True).clip(min=1e-4)
-            prob = gamma.max(dim=-1)[0]
-            # [B, K]
-            topk_ids = torch.topk(prob, k=self.top_k)[1].unsqueeze(dim=-1).expand(-1, -1, src.shape[-1])
-            src_k = torch.gather(src, index=topk_ids, dim=1)
-            tgt_k = torch.gather(src_corr, index=topk_ids, dim=1)
-        else:
-            src_k = src
-            tgt_k = tgt
-        alpha2 = self.alpha * self.alpha
-        src_edge = torch.cdist(src_k, src_k)
-        tgt_edge = torch.cdist(tgt_k, tgt_k)
-        z = torch.abs(src_edge - tgt_edge)
-        loss = (1.0 - torch.exp(-0.5 * torch.pow(z, 2.0) / alpha2)).sum(dim=-1)
-        return loss.mean()
 
 
 class SusWelschLoss(nn.Module):

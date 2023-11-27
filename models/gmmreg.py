@@ -9,7 +9,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from lib.loss import CluLoss, WelschLoss
+from lib.loss import CluLoss, WelschLoss, KMLoss
 from lib.o3dutils import integrate_trans, reg_solver
 from lib.utils import get_anchor_corrs, gmm_params
 from models.attn import Transformer, PositionEncoding
@@ -30,8 +30,8 @@ class GMMReg(nn.Module):
         self.sattn1 = Transformer(emb_dims, config.num_heads)
         self.cattn = Transformer(emb_dims, config.num_heads)
         self.sattn2 = Transformer(emb_dims, config.num_heads)
-        self.cluloss = CluLoss(tau=0.1)
-        self.we_loss = WelschLoss(alpha=0.1)
+        # self.cluloss = CluLoss(tau=0.1)
+        self.cluloss = KMLoss(256)
 
     def forward(self, src, tgt, is_test=False):
         batch_size, _, _ = src.size()
@@ -87,8 +87,10 @@ class GMMReg(nn.Module):
             src, tgt, src_feats, tgt_feats, src_log_scores, tgt_log_scores, src_o, tgt_o)
         # iv_transf = soft_svd(tgt_mu_xyz, src_mu_xyz, tgt_mu_feats, src_mu_feats)
         # clustering-based loss
-        src_clu_loss = self.cluloss(src, src_xyz_mu, src_feats, src_gamma)
-        tgt_clu_loss = self.cluloss(tgt, tgt_xyz_mu, tgt_feats, tgt_gamma)
+        # src_clu_loss = self.cluloss(src, src_xyz_mu, src_feats, src_gamma)
+        # tgt_clu_loss = self.cluloss(tgt, tgt_xyz_mu, tgt_feats, tgt_gamma)
+        src_clu_loss = self.cluloss(src.transpose(-1, -2), src_gamma, src_o)
+        tgt_clu_loss = self.cluloss(tgt.transpose(-1, -2), tgt_gamma, tgt_o)
         clu_loss = 0.5 * (src_clu_loss + tgt_clu_loss)
         # we_loss = self.we_loss(src.transpose(-1, -2), tgt.transpose(-1, -2))
         # + self.we_loss(
