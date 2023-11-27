@@ -9,7 +9,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from lib.utils import wkeans, gmm_params, contrastsk, get_local_corrs
+from lib.utils import wkeans, gmm_params, contrastsk, get_local_corrs, sinkhorn
 
 
 class ConLoss(nn.Module):
@@ -73,14 +73,25 @@ class KMLoss(nn.Module):
 
 
 class WelschLoss(nn.Module):
-    def __init__(self, alpha=1.0):
+    def __init__(self, alpha=1.0, top_k=128):
         super().__init__()
         self.alpha = alpha
+        self.top_k = top_k
 
-    def forward(self, src, tgt):
+    def forward(self, src, tgt, src_feats, tgt_feats, src_o, tgt_o):
+        src_pi = src_o / src_o.sum(dim=-1, keepdims=True).clip(min=1e-4)
+        tgt_pi = tgt_o / tgt_o.sum(dim=-1, keepdims=True).clip(min=1e-4)
+        cost = torch.cdist(src_feats, tgt_feats)
+        gamma = sinkhorn(cost, p=src_pi, q=tgt_pi, epsilon=1e-3, thresh=1e-3, max_iter=20)[0]
+        src_corr = gamma @ tgt / gamma.sum(dim=-1, keepdims=True).clip(min=1e-4)
+        prob = gamma.max(dim=-1)[0]
+        # [B, K]
+        topk_ids = torch.topk(prob, k=self.top_k)[1].unsqueeze(dim=-1).expand(-1, -1, src.shape[-1])
+        src_k = torch.gather(src, index=topk_ids, dim=1)
+        tgt_k = torch.gather(src_corr, index=topk_ids, dim=1)
         alpha2 = self.alpha * self.alpha
-        src_edge = torch.cdist(src, src)
-        tgt_edge = torch.cdist(tgt, tgt)
+        src_edge = torch.cdist(src_k, src_k)
+        tgt_edge = torch.cdist(tgt_k, tgt_k)
         z = torch.abs(src_edge - tgt_edge)
         loss = 1.0 - torch.exp(-0.5 * torch.pow(z, 2.0) / alpha2).sum(dim=-1)
         return loss.mean()
