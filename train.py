@@ -18,13 +18,13 @@ from tqdm import tqdm
 
 from configs.cfgs import mnet
 from datasets.dataloader import data_loader
-from lib.loss import dcp_loss, get_weighted_bce_loss
+from lib.loss import dcp_loss, get_weighted_bce_loss, SusWelschLoss
 from lib.metric import rotation_error, translation_error, dcp_metrics, summarize_metrics, save_model, _init_
 from lib.se3 import decompose_trans
 from models.gmmreg import GMMReg
 
 
-def train_one_epoch(epoch, model, loader, optimizer, logger, checkpoint_path):
+def train_one_epoch(epoch, model, loader, optimizer, logger, checkpoint_path, we_loss=None):
     model.train()
     batch_time = []
     data_time = []
@@ -40,21 +40,21 @@ def train_one_epoch(epoch, model, loader, optimizer, logger, checkpoint_path):
         pts2 = data["tgt_xyz"]
         src_overlap = data["src_overlap"]
         tgt_overlap = data["tgt_overlap"]
-        transf_gt = data["transform_gt"]
+        tsfm_gt = data["transform_gt"]
         if torch.cuda.is_available():
             pts1 = pts1.cuda()
             pts2 = pts2.cuda()
             src_overlap = src_overlap.cuda().squeeze(-1)
             tgt_overlap = tgt_overlap.cuda().squeeze(-1)
-            transf_gt = transf_gt.cuda()
+            tsfm_gt = tsfm_gt.cuda()
         pts1 = pts1.transpose(-1, -2)
         pts2 = pts2.transpose(-1, -2)
         data_time.append(time() - start)
         optimizer.zero_grad()
-        rot_gt, trans_gt = decompose_trans(transf_gt)
-        batch_size = transf_gt.shape[0]
+        rot_gt, trans_gt = decompose_trans(tsfm_gt)
+        batch_size = tsfm_gt.shape[0]
         trans_gt = trans_gt.view(batch_size, 3)
-        rot, trans, src_o, tgt_o, clu_loss = model(pts1, pts2)
+        rot, trans, src_o, tgt_o, clu_loss, src_xyz_mu, tgt_corr_mu = model(pts1, pts2)
         o_pred = torch.cat([src_o, tgt_o], dim=-1)
         o_gt = torch.cat([src_overlap, tgt_overlap], dim=-1)
         o_pred, o_gt = torch.nan_to_num(o_pred, nan=0.0).clip(min=0.0), torch.nan_to_num(o_gt, nan=0.0).clip(min=0.0)
@@ -64,10 +64,12 @@ def train_one_epoch(epoch, model, loader, optimizer, logger, checkpoint_path):
         r_err = rotation_error(rot, rot_gt)
         t_err = translation_error(trans, trans_gt)
         try:
-            loss = dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(o_pred, o_gt)
+            loss = 10*dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(o_pred, o_gt) + we_loss(
+                src_xyz_mu.transpose(-1, -2), tgt_corr_mu.transpose(-1, -2), tsfm_gt
+            )
             loss = torch.nan_to_num(loss, nan=0.0)
         except Exception as e:
-            loss = dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss
+            loss = 10*dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss
         loss.backward()
         optimizer.step()
         batch_time.append(time() - start)
@@ -101,7 +103,7 @@ def train_one_epoch(epoch, model, loader, optimizer, logger, checkpoint_path):
     return summary_metrics
 
 
-def eval_one_epoch(epoch, model, loader, logger):
+def eval_one_epoch(epoch, model, loader, logger, we_loss):
     model.eval()
     batch_time = []
     data_time = []
@@ -116,21 +118,21 @@ def eval_one_epoch(epoch, model, loader, logger):
         pts2 = data["tgt_xyz"]
         src_overlap = data["src_overlap"]
         tgt_overlap = data["tgt_overlap"]
-        transf_gt = data["transform_gt"]
+        tsfm_gt = data["transform_gt"]
         if torch.cuda.is_available():
             pts1 = pts1.cuda()
             pts2 = pts2.cuda()
             src_overlap = src_overlap.cuda().squeeze(-1)
             tgt_overlap = tgt_overlap.cuda().squeeze(-1)
-            transf_gt = transf_gt.cuda()
+            tsfm_gt = tsfm_gt.cuda()
         pts1 = pts1.transpose(-1, -2)
         pts2 = pts2.transpose(-1, -2)
-        rot_gt, trans_gt = decompose_trans(transf_gt)
+        rot_gt, trans_gt = decompose_trans(tsfm_gt)
         data_time.append(time() - start)
         with torch.no_grad():
-            batch_size = transf_gt.shape[0]
+            batch_size = tsfm_gt.shape[0]
             trans_gt = trans_gt.view(batch_size, 3)
-            rot, trans, src_o, tgt_o, clu_loss = model(pts1, pts2, True)
+            rot, trans, src_o, tgt_o, clu_loss, src_xyz_mu, tgt_corr_mu = model(pts1, pts2, True)
             batch_time.append(time() - start)
             o_pred = torch.cat([src_o, tgt_o], dim=-1)
             o_gt = torch.cat([src_overlap, tgt_overlap], dim=-1)
@@ -139,9 +141,12 @@ def eval_one_epoch(epoch, model, loader, logger):
             r_err = rotation_error(rot, rot_gt)
             t_err = translation_error(trans, trans_gt)
             try:
-                loss = 10*dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(o_pred, o_gt)
+                loss = 10*dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(
+                    o_pred, o_gt) + we_loss(
+                src_xyz_mu.transpose(-1, -2), tgt_corr_mu.transpose(-1, -2), tsfm_gt
+            )
             except Exception as e:
-                loss = dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss
+                loss = 10*dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss
             # training accuracy statistic
             losses.append(loss.item())
             r_errs.append(r_err.mean().item())
@@ -214,9 +219,10 @@ if __name__ == "__main__":
             model.load_state_dict(torch.load(optim_path))
         except Exception as e:
             model.module.load_state_dict(torch.load(optim_path))
+    we_loss = SusWelschLoss(args.mu)
     for epoch in range(args.epochs):
-        train_metrics = train_one_epoch(epoch, model, train_loader, optimizer, logger, checkpoint_path)
-        val_metrics = eval_one_epoch(epoch, model, test_loader, logger)
+        train_metrics = train_one_epoch(epoch, model, train_loader, optimizer, logger, checkpoint_path, we_loss)
+        val_metrics = eval_one_epoch(epoch, model, test_loader, logger, we_loss)
         if optimal_pcab > val_metrics['pcab_dist']:
             optimal_rot = val_metrics['r_mae']
             optimal_tra = val_metrics['t_mae']

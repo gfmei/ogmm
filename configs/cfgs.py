@@ -38,6 +38,7 @@ def mnet():
     parser.add_argument('--K', type=int, default=20, metavar='N', help='Num of neighbors to use for DGCNN')
     parser.add_argument('--gnn_k', type=int, default=20, metavar='N', help='Num of neighbors to use for DGCNN')
     parser.add_argument('--tau', type=float, default=0.01, metavar='N', help='')
+    parser.add_argument('--mu', type=float, default=0.1, metavar='N', help='')
     parser.add_argument('--nn_margin', type=float, default=0.5, metavar='N', help='')
     parser.add_argument('--loss_margin', type=float, default=0.012, metavar='N', help='')
     parser.add_argument('--n_keypoints', type=int, default=256, metavar='N', help='')

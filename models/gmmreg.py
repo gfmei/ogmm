@@ -90,12 +90,12 @@ class GMMReg(nn.Module):
         src_clu_loss = self.cluloss(src, src_xyz_mu, src_feats, src_gamma)
         tgt_clu_loss = self.cluloss(tgt, tgt_xyz_mu, tgt_feats, tgt_gamma)
         clu_loss = 0.5 * (src_clu_loss + tgt_clu_loss)
-        we_loss = self.we_loss(src.transpose(-1, -2), tgt.transpose(-1, -2))
+        # we_loss = self.we_loss(src.transpose(-1, -2), tgt.transpose(-1, -2))
         # + self.we_loss(
         #     src_mu, soft_src, src_scores.transpose(-1, -2))
-        loss = clu_loss + 0.01*we_loss
+        loss = clu_loss
         if is_test:
             trans_init = integrate_trans(rot, trans)
             rot, trans = reg_solver(src, tgt, voxel_size=self.config.overlap_radius, trans_init=trans_init)
 
-        return rot, trans, src_o, tgt_o, loss
+        return rot, trans, src_o, tgt_o, loss, src_xyz_mu, soft_corr_mu

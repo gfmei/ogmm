@@ -9,6 +9,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+from lib.se3 import torch_transform
 from lib.utils import wkeans, gmm_params, contrastsk, get_local_corrs, sinkhorn
 
 
@@ -97,6 +98,19 @@ class WelschLoss(nn.Module):
         src_edge = torch.cdist(src_k, src_k)
         tgt_edge = torch.cdist(tgt_k, tgt_k)
         z = torch.abs(src_edge - tgt_edge)
+        loss = (1.0 - torch.exp(-0.5 * torch.pow(z, 2.0) / alpha2)).sum(dim=-1)
+        return loss.mean()
+
+
+class SusWelschLoss(nn.Module):
+    def __init__(self, alpha=1.0):
+        super().__init__()
+        self.alpha = alpha
+
+    def forward(self, src, tgt, tsfm):
+        src = torch_transform(tsfm, src, normals=None)
+        alpha2 = self.alpha * self.alpha
+        z = torch.norm(src, tgt, dim=-1)
         loss = (1.0 - torch.exp(-0.5 * torch.pow(z, 2.0) / alpha2)).sum(dim=-1)
         return loss.mean()
 
