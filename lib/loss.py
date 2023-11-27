@@ -72,6 +72,20 @@ class KMLoss(nn.Module):
         return loss
 
 
+class WelschLoss(nn.Module):
+    def __init__(self, alpha=1.0):
+        super().__init__()
+        self.alpha = alpha
+
+    def forward(self, src, tgt):
+        alpha2 = self.alpha * self.alpha
+        src_edge = torch.cdist(src, src)
+        tgt_edge = torch.cdist(tgt, tgt)
+        z = torch.abs(src_edge - tgt_edge)
+        loss = 1.0 - torch.exp(-0.5 * torch.pow(z, 2.0) / alpha2).sum(dim=-1)
+        return loss.mean()
+
+
 class CluLoss(nn.Module):
     def __init__(self, tau=0.5):
         super().__init__()

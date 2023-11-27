@@ -9,7 +9,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from lib.loss import CluLoss
+from lib.loss import CluLoss, WelschLoss
 from lib.o3dutils import integrate_trans, reg_solver
 from lib.utils import get_anchor_corrs, gmm_params
 from models.attn import Transformer, PositionEncoding
@@ -31,6 +31,7 @@ class GMMReg(nn.Module):
         self.cattn = Transformer(emb_dims, config.num_heads)
         self.sattn2 = Transformer(emb_dims, config.num_heads)
         self.cluloss = CluLoss(tau=0.1)
+        self.we_loss = WelschLoss(alpha=0.1)
 
     def forward(self, src, tgt, is_test=False):
         batch_size, _, _ = src.size()
@@ -89,10 +90,10 @@ class GMMReg(nn.Module):
         src_clu_loss = self.cluloss(src, src_xyz_mu, src_feats, src_gamma)
         tgt_clu_loss = self.cluloss(tgt, tgt_xyz_mu, tgt_feats, tgt_gamma)
         clu_loss = 0.5 * (src_clu_loss + tgt_clu_loss)
-        # we_loss = self.we_loss(tgt_mu_xyz, soft_tgt_mu)
+        we_loss = self.we_loss(src_xyz_mu, soft_corr_mu)
         # + self.we_loss(
         #     src_mu, soft_src, src_scores.transpose(-1, -2))
-        loss = clu_loss
+        loss = clu_loss + 0.1*we_loss
         if is_test:
             trans_init = integrate_trans(rot, trans)
             rot, trans = reg_solver(src, tgt, voxel_size=self.config.overlap_radius, trans_init=trans_init)
