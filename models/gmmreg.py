@@ -31,7 +31,7 @@ class GMMReg(nn.Module):
         self.cattn = Transformer(emb_dims, config.num_heads)
         self.sattn2 = Transformer(emb_dims, config.num_heads)
         # self.cluloss = CluLoss(tau=0.1)
-        self.cluloss = KMLoss(256)
+        self.cluloss = KMLoss(config.n_keypoints)
 
     def forward(self, src, tgt, is_test=False):
         batch_size, _, _ = src.size()

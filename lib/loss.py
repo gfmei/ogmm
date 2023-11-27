@@ -66,8 +66,9 @@ class KMLoss(nn.Module):
         topk_ids = torch.topk(prob, k=self.top_k, dim=-1)[1].unsqueeze(dim=-1)
         log_score = torch.gather(log_gamma, index=topk_ids.expand(-1, -1, log_gamma.shape[-1]), dim=1)
         pts = torch.gather(pts, index=topk_ids.expand(-1, -1, pts.shape[-1]), dim=1)
-        log_score = log_score / log_score.sum(dim=-1, keepdim=True).clip(min=1e-4)
-        pi, mu = gmm_params(log_score, pts)
+        score = torch.softmax(log_score, dim=-1)
+        score = score / score.sum(dim=-1, keepdim=True).clip(min=1e-4)
+        pi, mu = gmm_params(score, pts)
         with torch.no_grad():
             # log_score, log_score [B,N,K], p, feats [b,d,k]
             assign, dis = contrastsk(pts, mu, max_iter=25, dst='eu')
