@@ -93,7 +93,7 @@ class WelschLoss(nn.Module):
         src_edge = torch.cdist(src_k, src_k)
         tgt_edge = torch.cdist(tgt_k, tgt_k)
         z = torch.abs(src_edge - tgt_edge)
-        loss = 1.0 - torch.exp(-0.5 * torch.pow(z, 2.0) / alpha2).sum(dim=-1)
+        loss = (1.0 - torch.exp(-0.5 * torch.pow(z, 2.0) / alpha2)).sum(dim=-1)
         return loss.mean()
 
 
