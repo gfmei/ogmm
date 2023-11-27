@@ -10,7 +10,7 @@ import torch.nn.functional as F
 from torch import nn
 
 from lib.se3 import torch_transform
-from lib.utils import wkeans, gmm_params, contrastsk, get_local_corrs, sinkhorn
+from lib.utils import gmm_params, contrastsk, get_local_corrs
 
 
 class ConLoss(nn.Module):
@@ -62,22 +62,21 @@ class KMLoss(nn.Module):
         super().__init__()
         self.top_k = top_k
 
-    def forward(self, pts, gamma, prob):
-        # gamma = wkeans(feats, num_clusters)[0]
+    def forward(self, pts, log_gamma, prob):
         topk_ids = torch.topk(prob, k=self.top_k)[1].unsqueeze(dim=-1)
-        score = torch.gather(gamma, index=topk_ids.expand(-1, -1, gamma.shape[-1]), dim=1)
+        log_score = torch.gather(log_gamma, index=topk_ids.expand(-1, -1, log_gamma.shape[-1]), dim=1)
         pts = torch.gather(pts, index=topk_ids.expand(-1, -1, pts.shape[-1]), dim=1)
-        score = score / score.sum(dim=-1, keepdim=True).clip(min=1e-4)
-        pi, mu = gmm_params(score, pts)
+        log_score = log_score / log_score.sum(dim=-1, keepdim=True).clip(min=1e-4)
+        pi, mu = gmm_params(log_score, pts)
         with torch.no_grad():
             # log_score, log_score [B,N,K], p, feats [b,d,k]
             assign, dis = contrastsk(pts, mu, max_iter=25, dst='eu')
             assign = assign / assign.sum(dim=-1, keepdim=True).clip(min=1e-4)  # [b, n, k]
-        loss = torch.mean(torch.sum(-(assign.detach() * torch.log(score.clip(min=1e-3))).clip(max=1.0), dim=1))
+        loss = torch.mean(torch.sum(-assign.detach() * torch.log_softmax(log_score, dim=-1), dim=1))
         return loss
 
 
-class SusWelschLoss(nn.Module):
+class WelschLoss(nn.Module):
     def __init__(self, alpha=1.0):
         super().__init__()
         self.alpha = alpha
@@ -119,17 +118,5 @@ def con_loss(src_desc, tgt_desc, tau=0.1):
 
 
 def get_weighted_bce_loss(prediction, gt):
-    # loss = nn.BCELoss(reduction='none')
-    # class_loss = loss(prediction, gt)
-    #
-    # weights = torch.ones_like(gt).to(gt)
-    # w_negative = gt.sum() / gt.size(0)
-    # w_positive = 1 - w_negative
-    # try:
-    #     weights[gt >= 0.5] = w_positive
-    #     weights[gt < 0.5] = w_negative
-    #     w_class_loss = torch.mean(weights * class_loss)
-    # except Exception as e:
-    #     w_class_loss = torch.mean(class_loss)
 
     return F.mse_loss(prediction, gt)

@@ -18,7 +18,7 @@ from tqdm import tqdm
 
 from configs.cfgs import mnet
 from datasets.dataloader import data_loader
-from lib.loss import dcp_loss, get_weighted_bce_loss, SusWelschLoss
+from lib.loss import dcp_loss, get_weighted_bce_loss, WelschLoss
 from lib.metric import rotation_error, translation_error, dcp_metrics, summarize_metrics, save_model, _init_
 from lib.se3 import decompose_trans
 from models.gmmreg import GMMReg
@@ -219,7 +219,7 @@ if __name__ == "__main__":
             model.load_state_dict(torch.load(optim_path))
         except Exception as e:
             model.module.load_state_dict(torch.load(optim_path))
-    we_loss = SusWelschLoss(args.mu)
+    we_loss = WelschLoss(args.mu)
     for epoch in range(args.epochs):
         train_metrics = train_one_epoch(epoch, model, train_loader, optimizer, logger, checkpoint_path, we_loss)
         val_metrics = eval_one_epoch(epoch, model, test_loader, logger, we_loss)

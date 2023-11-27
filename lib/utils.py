@@ -198,27 +198,6 @@ def farthest_point_sample(xyz, npoint, is_center=False):
     return centroids
 
 
-def wkeans(x, num_clusters, dst='feats', iters=10, is_fast=True):
-    bs, num, dim = x.shape
-    if is_fast:
-        ids = farthest_point_sample(x, num_clusters, is_center=True)
-        centroids = index_points(x, ids)
-    else:
-        ids = torch.randperm(num)[:num_clusters]
-        centroids = x[:, ids, :]
-    gamma, pi = torch.zeros((bs, num, num_clusters), requires_grad=True).to(x), None
-    for i in range(iters):
-        if dst == 'eu':
-            cost = square_distance(x, centroids)
-        else:
-            x = F.normalize(x, p=2, dim=-1)
-            centroids = F.normalize(centroids, p=2, dim=-1)
-            cost = 2.0 - 2.0 * torch.einsum('bnd,bmd->bnm', x, centroids)
-        gamma = num * sinkhorn(cost, max_iter=10)[0]
-        pi, centroids = gmm_params(gamma, x)
-    return gamma, pi, centroids
-
-
 def cos_similarity(x, y):
     x = F.normalize(x, dim=-1, p=2)
     y = F.normalize(y, dim=-1, p=2)
@@ -252,10 +231,3 @@ def get_local_corrs(xyz, xyz_mu, feats):
     # xyz_anchor = torch.gather(xyz, dim=1, index=xyz_idx)
     feats_pos = torch.gather(feats, dim=1, index=feats_idx)
     return feats_pos
-
-
-def get_anchor_corrs(xyz, feats, num_clusters, dst='eu', iters=10, is_fast=True):
-    gamma, pi, xyz_mu = wkeans(xyz.transpose(-1, -2), num_clusters, dst, iters, is_fast)
-    feats_pos = gmm_params(gamma, feats.transpose(-1, -2))[1].transpose(-1, -2)
-    feats_anchor = get_local_corrs(xyz.transpose(-1, -2), xyz_mu, feats.transpose(-1, -2)).transpose(-1, -2)
-    return feats_anchor, feats_pos, gamma, pi, xyz_mu.transpose(-1, -2)

@@ -89,8 +89,8 @@ class GMMReg(nn.Module):
         # clustering-based loss
         # src_clu_loss = self.cluloss(src, src_xyz_mu, src_feats, src_gamma)
         # tgt_clu_loss = self.cluloss(tgt, tgt_xyz_mu, tgt_feats, tgt_gamma)
-        src_clu_loss = self.cluloss(src.transpose(-1, -2), src_gamma, src_o)
-        tgt_clu_loss = self.cluloss(tgt.transpose(-1, -2), tgt_gamma, tgt_o)
+        src_clu_loss = self.cluloss(src.transpose(-1, -2), src_log_scores.transpose(-1, -2), src_o)
+        tgt_clu_loss = self.cluloss(tgt.transpose(-1, -2), tgt_log_scores.transpose(-1, -2), tgt_o)
         clu_loss = 0.5 * (src_clu_loss + tgt_clu_loss)
         # we_loss = self.we_loss(src.transpose(-1, -2), tgt.transpose(-1, -2))
         # + self.we_loss(
