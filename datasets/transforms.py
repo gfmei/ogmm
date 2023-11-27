@@ -464,18 +464,18 @@ class RandomCrop:
         if len(self.p_keep) == 1:
             points_src, src_mask = self.crop(sample['points_src'], self.p_keep[0])
             points_ref = sample['points_ref']
-            ref_mask = np.ones(sample['points_ref'].shape[0], dtype=np.bool)
+            ref_mask = np.ones(sample['points_ref'].shape[0], dtype=np.bool_)
         else:
             points_src, src_mask = self.crop(sample['points_src'], self.p_keep[0])
             points_ref, ref_mask = self.crop(sample['points_ref'], self.p_keep[0])
 
         # Compute overlap masks
-        src_overlap = np.zeros(sample['points_src'].shape[0], dtype=np.bool)
+        src_overlap = np.zeros(sample['points_src'].shape[0], dtype=np.bool_)
         temp = ref_mask[sample['correspondences'][1]]
         src_overlap[sample['correspondences'][0][temp]] = 1
         src_overlap = src_overlap[src_mask]
 
-        ref_overlap = np.zeros(sample['points_ref'].shape[0], dtype=np.bool)
+        ref_overlap = np.zeros(sample['points_ref'].shape[0], dtype=np.bool_)
         temp = src_mask[sample['correspondences'][0]]
         ref_overlap[sample['correspondences'][1][temp]] = 1
         ref_overlap = ref_overlap[ref_mask]

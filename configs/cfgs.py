@@ -12,7 +12,7 @@ import argparse
 def mnet():
     parser = argparse.ArgumentParser(description='Point Cloud Registration')
     # dataset set
-    parser.add_argument('--root', type=str, default='/data/gmei/data', metavar='N', help='path of data')
+    parser.add_argument('--root', type=str, default='/data/disk1/data', metavar='N', help='path of data')
     parser.add_argument('--dataset', type=str, default='modelnet', choices=[
         'modelnet', 'modelnetdv', 'regtr', 'icl_nuim', 'modelnetcp'], metavar='N', help='dataset to use')
     parser.add_argument('--trans_mag', type=float, default=0.5, metavar='N', help='translation')
@@ -24,7 +24,7 @@ def mnet():
     parser.add_argument('--overlap_radius', type=float, default=0.035, metavar='N', help='')
 
     # model set
-    parser.add_argument('--model', type=str, default='DeepGMR', metavar='N', help='Model to use')
+    parser.add_argument('--model', type=str, default='GMMReg', metavar='N', help='Model to use')
     parser.add_argument('--attn', type=str, default='transformer', metavar='N', choices=['identity', 'transformer'],
                         help='Attention-based attn generator to use, [identity, transformer]')
     parser.add_argument('--head', type=str, default='svd', metavar='N', choices=['mlp', 'svd'],
