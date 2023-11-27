@@ -63,7 +63,7 @@ class KMLoss(nn.Module):
         self.top_k = top_k
 
     def forward(self, pts, log_gamma, prob):
-        topk_ids = torch.topk(prob, k=self.top_k)[1].unsqueeze(dim=-1)
+        topk_ids = torch.topk(prob, k=self.top_k, dim=-1)[1].unsqueeze(dim=-1)
         log_score = torch.gather(log_gamma, index=topk_ids.expand(-1, -1, log_gamma.shape[-1]), dim=1)
         pts = torch.gather(pts, index=topk_ids.expand(-1, -1, pts.shape[-1]), dim=1)
         log_score = log_score / log_score.sum(dim=-1, keepdim=True).clip(min=1e-4)

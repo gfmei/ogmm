@@ -9,9 +9,9 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from lib.loss import CluLoss, WelschLoss, KMLoss
+from lib.loss import KMLoss
 from lib.o3dutils import integrate_trans, reg_solver
-from lib.utils import get_anchor_corrs, gmm_params
+from lib.utils import gmm_params, get_anchor_corrs
 from models.attn import Transformer, PositionEncoding
 from models.dgcnn import DGCNN, CONV, GMMSVD
 
