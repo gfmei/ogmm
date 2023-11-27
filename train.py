@@ -193,7 +193,7 @@ if __name__ == "__main__":
     scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[75, 150, 200], gamma=0.1)
     logger = logging.getLogger(__name__)
     logger.setLevel(level=logging.DEBUG)
-    logfile = os.path.join(args.model_path, 'checkpoints/{}/train.log'.format(args.exp_name))
+    logfile = os.path.join(args.model_path, 'checkpoints/{}/train.log'.format(args.model))
     handler = logging.FileHandler(logfile, encoding='UTF-8')
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
@@ -206,7 +206,7 @@ if __name__ == "__main__":
     optimal_ccd = np.inf
     optimal_pcab = np.inf
     optimal_recall = -np.inf
-    checkpoint_path = os.path.join(args.model_path, 'checkpoints/{}'.format(args.exp_name))
+    checkpoint_path = os.path.join(args.model_path, 'checkpoints/{}'.format(args.model))
     optim_path = os.path.join(checkpoint_path, 'models/optim_model.pt')
     if os.path.exists(optim_path):
         try:

@@ -90,8 +90,7 @@ class GMMReg(nn.Module):
         src_clu_loss = self.cluloss(src, src_xyz_mu, src_feats, src_gamma)
         tgt_clu_loss = self.cluloss(tgt, tgt_xyz_mu, tgt_feats, tgt_gamma)
         clu_loss = 0.5 * (src_clu_loss + tgt_clu_loss)
-        we_loss = self.we_loss(src.transpose(-1, -2), tgt.transpose(-1, -2), src_feats.transpose(-1, -2),
-                               tgt_feats.transpose(-1, -2), src_o, tgt_o)
+        we_loss = self.we_loss(src.transpose(-1, -2), tgt.transpose(-1, -2))
         # + self.we_loss(
         #     src_mu, soft_src, src_scores.transpose(-1, -2))
         loss = clu_loss + 0.1*we_loss

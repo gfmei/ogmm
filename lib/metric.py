@@ -45,10 +45,10 @@ def concatenate(a: np.ndarray, b: np.ndarray):
 def _init_(args):
     if not os.path.exists('checkpoints'):
         os.makedirs('checkpoints')
-    if not os.path.exists('checkpoints/' + args.exp_name):
-        os.makedirs('checkpoints/' + args.exp_name)
-    if not os.path.exists('checkpoints/' + args.exp_name + '/' + 'models'):
-        os.makedirs('checkpoints/' + args.exp_name + '/' + 'models')
+    if not os.path.exists('checkpoints/' + args.model):
+        os.makedirs('checkpoints/' + args.model)
+    if not os.path.exists('checkpoints/' + args.model + '/' + 'models'):
+        os.makedirs('checkpoints/' + args.model + '/' + 'models')
 
 
 def to_numpy(tensor):

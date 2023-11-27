@@ -78,17 +78,21 @@ class WelschLoss(nn.Module):
         self.alpha = alpha
         self.top_k = top_k
 
-    def forward(self, src, tgt, src_feats, tgt_feats, src_o, tgt_o):
-        src_pi = src_o / src_o.sum(dim=-1, keepdims=True).clip(min=1e-4)
-        tgt_pi = tgt_o / tgt_o.sum(dim=-1, keepdims=True).clip(min=1e-4)
-        cost = torch.cdist(src_feats, tgt_feats)
-        gamma = sinkhorn(cost, p=src_pi, q=tgt_pi, epsilon=1e-3, thresh=1e-3, max_iter=20)[0]
-        src_corr = gamma @ tgt / gamma.sum(dim=-1, keepdims=True).clip(min=1e-4)
-        prob = gamma.max(dim=-1)[0]
-        # [B, K]
-        topk_ids = torch.topk(prob, k=self.top_k)[1].unsqueeze(dim=-1).expand(-1, -1, src.shape[-1])
-        src_k = torch.gather(src, index=topk_ids, dim=1)
-        tgt_k = torch.gather(src_corr, index=topk_ids, dim=1)
+    def forward(self, src, tgt, src_feats=None, tgt_feats=None, src_o=None, tgt_o=None):
+        if src_feats is not None and tgt_feats is not None:
+            src_pi = src_o / src_o.sum(dim=-1, keepdims=True).clip(min=1e-4)
+            tgt_pi = tgt_o / tgt_o.sum(dim=-1, keepdims=True).clip(min=1e-4)
+            cost = torch.cdist(src_feats, tgt_feats)
+            gamma = sinkhorn(cost, p=src_pi, q=tgt_pi, epsilon=1e-3, thresh=1e-3, max_iter=20)[0]
+            src_corr = gamma @ tgt / gamma.sum(dim=-1, keepdims=True).clip(min=1e-4)
+            prob = gamma.max(dim=-1)[0]
+            # [B, K]
+            topk_ids = torch.topk(prob, k=self.top_k)[1].unsqueeze(dim=-1).expand(-1, -1, src.shape[-1])
+            src_k = torch.gather(src, index=topk_ids, dim=1)
+            tgt_k = torch.gather(src_corr, index=topk_ids, dim=1)
+        else:
+            src_k = src
+            tgt_k = tgt
         alpha2 = self.alpha * self.alpha
         src_edge = torch.cdist(src_k, src_k)
         tgt_edge = torch.cdist(tgt_k, tgt_k)

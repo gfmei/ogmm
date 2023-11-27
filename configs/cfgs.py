@@ -44,7 +44,6 @@ def mnet():
     parser.add_argument('--list_k1', type=list, default=[5, 5, 5], metavar='N', help='')
     parser.add_argument('--list_k2', type=list, default=[5, 5, 5], metavar='N', help='')
     # training set
-    parser.add_argument('--exp_name', type=str, default='DeepGMR', metavar='N', help='Name of the experiment')
     parser.add_argument('--model_path', type=str, default='', metavar='N', help='Name of the experiment')
     parser.add_argument('--batch_size', type=int, default=32, metavar='batch_size', help='Size of batch)')
     parser.add_argument('--test_batch_size', type=int, default=24, metavar='batch_size', help='Size of batch)')
