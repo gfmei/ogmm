@@ -63,14 +63,13 @@ def train_one_epoch(epoch, model, loader, optimizer, logger, checkpoint_path, we
             clu_loss = clu_loss.sum()
         r_err = rotation_error(rot, rot_gt)
         t_err = translation_error(trans, trans_gt)
-        loss = 10 * dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(
-            o_pred, o_gt)
-        # try:
-        #     loss = (clu_loss + get_weighted_bce_loss(o_pred, o_gt) +
-        #     loss = torch.nan_to_num(loss, nan=10.0)
-        # + 0.1 * we_loss(src_node_xyz, tgt_node_xyz, tsfm_gt)
-        # except Exception as e:
-        #     loss = 10 * dcp_loss(rot, rot_gt, trans, trans_gt)
+
+        try:
+            loss = 10 * dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(
+                o_pred, o_gt)
+            loss = torch.nan_to_num(loss, nan=10.0) + 0.01 * we_loss(src_node_xyz, tgt_node_xyz, tsfm_gt)
+        except Exception as e:
+            loss = 10 * dcp_loss(rot, rot_gt, trans, trans_gt)
         loss.backward()
         optimizer.step()
         batch_time.append(time() - start)
