@@ -67,7 +67,7 @@ def train_one_epoch(epoch, model, loader, optimizer, logger, checkpoint_path, we
         try:
             loss = 10 * dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(
                 o_pred, o_gt)
-            loss = torch.nan_to_num(loss, nan=10.0) + 0.01 * we_loss(src_node_xyz, tgt_node_xyz, tsfm_gt)
+            loss = torch.nan_to_num(loss, nan=0.01 * we_loss(src_node_xyz, tgt_node_xyz, tsfm_gt))
         except Exception as e:
             loss = 10 * dcp_loss(rot, rot_gt, trans, trans_gt)
         loss.backward()
@@ -145,9 +145,6 @@ def eval_one_epoch(epoch, model, loader, logger, we_loss):
             try:
                 loss = 10 * dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(
                     o_pred, o_gt)
-                # + 0.1 * we_loss(pts1.transpose(-1, -2), pts2.transpose(-1, -2), tsfm_gt,
-                #                                   src_feats.transpose(-1, -2), tgt_feats.transpose(-1, -2), src_o,
-                #                                   tgt_o)
             except Exception as e:
                 loss = 10 * dcp_loss(rot, rot_gt, trans, trans_gt)
             # training accuracy statistic
