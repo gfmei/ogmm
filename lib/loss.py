@@ -63,16 +63,19 @@ class KMLoss(nn.Module):
         super().__init__()
         self.top_k = top_k
 
-    def forward(self, pts, log_gamma, prob):
-        topk_ids = torch.topk(prob, k=self.top_k, dim=-1)[1].unsqueeze(dim=-1)
-        log_score = torch.gather(log_gamma, index=topk_ids.expand(-1, -1, log_gamma.shape[-1]), dim=1)
-        pts = torch.gather(pts, index=topk_ids.expand(-1, -1, pts.shape[-1]), dim=1)
-        score = torch.softmax(log_score, dim=-1)
-        # score = score / score.sum(dim=-1, keepdim=True).clip(min=1e-4)
+    def forward(self, pts, log_gamma, prob=None):
+        if prob is not None:
+            topk_ids = torch.topk(prob, k=self.top_k, dim=-1)[1].unsqueeze(dim=-1)
+            log_score = torch.gather(log_gamma, index=topk_ids.expand(-1, -1, log_gamma.shape[-1]), dim=1)
+            pts = torch.gather(pts, index=topk_ids.expand(-1, -1, pts.shape[-1]), dim=1)
+            score = torch.softmax(log_score, dim=-1)
+        else:
+            log_score = log_gamma
+            score = torch.softmax(log_gamma, dim=-1)
         pi, mu = gmm_params(score, pts)
         with torch.no_grad():
             # log_score, log_score [B,N,K], p, feats [b,d,k]
-            assign, dis = contrastsk(pts, mu, max_iter=25, dst='eu')
+            assign, dis = contrastsk(pts, mu, p=pi, max_iter=25, dst='eu')
             assign = assign / assign.sum(dim=-1, keepdim=True).clip(min=1e-4)  # [b, n, k]
         loss = torch.mean(torch.sum(-assign.detach() * torch.log_softmax(log_score, dim=-1), dim=1))
         return loss

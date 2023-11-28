@@ -38,53 +38,81 @@ class CONV(nn.Module):
         return self.net(x)
 
 
+# class GMMSVD(nn.Module):
+#     def __init__(self, is_sk=True, epsilon=1e-3):
+#         super().__init__()
+#         self.is_sk = is_sk
+#         self.epsilon = epsilon
+#
+#     def forward(self, src, tgt, src_desc, tgt_desc, src_log_gamma=None, tgt_log_gamma=None, src_o=None, tgt_o=None):
+#         src_gamma = F.softmax(src_log_gamma, dim=1)  # [b,k,n]
+#         tgt_gamma = F.softmax(tgt_log_gamma, dim=1)
+#         src_pi, src_mu, src_desc_mu = og_params(
+#             src.transpose(-1, -2), src_gamma.transpose(-1, -2), src_o, src_desc.transpose(-1, -2))
+#         tgt_pi, tgt_mu, tgt_desc_mu = og_params(
+#             tgt.transpose(-1, -2), tgt_gamma.transpose(-1, -2), tgt_o, tgt_desc.transpose(-1, -2))
+#         ############################################################
+#         # *****Deal with the points in the non-overlap regions ****#
+#         src_desc_l = src_desc_mu[:, :, -1].detach()
+#         tgt_desc_l = tgt_desc_mu[:, :, -1].detach()
+#         src_desc_mu[:, :, -1] = tgt_desc_l
+#         tgt_desc_mu[:, :, -1] = src_desc_l
+#         # *****Deal with the case that source and target have different overlap ratios ****#
+#         src_pi_l = 1.0 - src_pi[:, -1] + self.epsilon
+#         tgt_pi_l = 1.0 - tgt_pi[:, -1] + self.epsilon
+#         src_pi[:, -1] = self.epsilon
+#         tgt_pi[:, -1] = self.epsilon
+#         src_pi = src_pi / src_pi_l[:, None]
+#         tgt_pi = tgt_pi / tgt_pi_l[:, None]
+#         ############################################################
+#         batch_size, num_points_tgt, _ = tgt_mu.size()
+#         batch_size, num_points, _ = src_desc_mu.size()
+#         similarity = cos_similarity(src_desc_mu, tgt_desc_mu)  # [b, n+1, m+1]
+#         # point-wise matching map
+#         if self.is_sk:
+#             cost = 2.0*(1.0 - similarity)
+#             scores = sinkhorn(cost, p=src_pi, q=tgt_pi, epsilon=1e-2, thresh=1e-2, max_iter=30)[0]
+#             scores = torch.nan_to_num(scores, 1e-4)
+#             src_scores = scores[:, :-1, :-1]
+#             pi = torch.sum(src_scores, dim=-1, keepdim=True).clip(min=1e-4)
+#             src_scores = src_scores / pi
+#         else:
+#             src_scores = torch.softmax(similarity[:, :-1, :-1] / 0.05, dim=2)  # [b, n, m]  Eq. (1)
+#
+#         src_corr = torch.einsum('bmd,bnm->bdn', tgt_mu[:, :-1, :], src_scores)  # [b,d,n] Eq. (4)
+#         # compute rigid transformation
+#         weight = src_scores.sum(dim=-1).unsqueeze(1)
+#         R, t = compute_rigid_transformation(src_mu[:, :-1, :].transpose(-1, -2), src_corr, weight)
+#
+#         return R, t.view(batch_size, 3), src_corr, tgt_mu[:, :-1, :].transpose(-1, -2)
+
+
 class GMMSVD(nn.Module):
     def __init__(self, is_sk=True, epsilon=1e-3):
         super().__init__()
         self.is_sk = is_sk
         self.epsilon = epsilon
 
-    def forward(self, src, tgt, src_desc, tgt_desc, src_log_gamma=None, tgt_log_gamma=None, src_o=None, tgt_o=None):
-        src_gamma = F.softmax(src_log_gamma, dim=1)  # [b,k,n]
-        tgt_gamma = F.softmax(tgt_log_gamma, dim=1)
-        src_pi, src_mu, src_desc_mu = og_params(
-            src.transpose(-1, -2), src_gamma.transpose(-1, -2), src_o, src_desc.transpose(-1, -2))
-        tgt_pi, tgt_mu, tgt_desc_mu = og_params(
-            tgt.transpose(-1, -2), tgt_gamma.transpose(-1, -2), tgt_o, tgt_desc.transpose(-1, -2))
-        ############################################################
-        # *****Deal with the points in the non-overlap regions ****#
-        src_desc_l = src_desc_mu[:, :, -1].detach()
-        tgt_desc_l = tgt_desc_mu[:, :, -1].detach()
-        src_desc_mu[:, :, -1] = tgt_desc_l
-        tgt_desc_mu[:, :, -1] = src_desc_l
-        # *****Deal with the case that source and target have different overlap ratios ****#
-        src_pi_l = 1.0 - src_pi[:, -1] + self.epsilon
-        tgt_pi_l = 1.0 - tgt_pi[:, -1] + self.epsilon
-        src_pi[:, -1] = self.epsilon
-        tgt_pi[:, -1] = self.epsilon
-        src_pi = src_pi / src_pi_l[:, None]
-        tgt_pi = tgt_pi / tgt_pi_l[:, None]
-        ############################################################
-        batch_size, num_points_tgt, _ = tgt_mu.size()
-        batch_size, num_points, _ = src_desc_mu.size()
-        similarity = cos_similarity(src_desc_mu, tgt_desc_mu)  # [b, n+1, m+1]
+    def forward(self, src, tgt, src_desc, tgt_desc, src_pi, tgt_pi):
+        batch_size = src.size(0)
+        similarity = cos_similarity(src_desc, tgt_desc)  # [b, n, m]
         # point-wise matching map
         if self.is_sk:
             cost = 2.0*(1.0 - similarity)
             scores = sinkhorn(cost, p=src_pi, q=tgt_pi, epsilon=1e-2, thresh=1e-2, max_iter=30)[0]
             scores = torch.nan_to_num(scores, 1e-4)
-            src_scores = scores[:, :-1, :-1]
+            src_scores = scores
             pi = torch.sum(src_scores, dim=-1, keepdim=True).clip(min=1e-4)
             src_scores = src_scores / pi
         else:
-            src_scores = torch.softmax(similarity[:, :-1, :-1] / 0.05, dim=2)  # [b, n, m]  Eq. (1)
+            src_scores = torch.softmax(similarity / 0.05, dim=2)  # [b, n, m]  Eq. (1)
 
-        src_corr = torch.einsum('bmd,bnm->bdn', tgt_mu[:, :-1, :], src_scores)  # [b,d,n] Eq. (4)
+        src_corr = torch.einsum('bmd,bnm->bdn', tgt, src_scores)  # [b,d,n] Eq. (4)
         # compute rigid transformation
         weight = src_scores.sum(dim=-1).unsqueeze(1)
-        R, t = compute_rigid_transformation(src_mu[:, :-1, :].transpose(-1, -2), src_corr, weight)
+        R, t = compute_rigid_transformation(src.transpose(-1, -2), src_corr, weight)
 
-        return R, t.view(batch_size, 3), src_corr, tgt_mu[:, :-1, :].transpose(-1, -2)
+        return R, t.view(batch_size, 3), src_corr, tgt.transpose(-1, -2)
 
 
 class DGCNN(nn.Module):

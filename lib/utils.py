@@ -242,7 +242,7 @@ def contrastsk(x, y, p=None, epsilon=1e-3, thresh=1e-3, max_iter=30, dst='eu'):
 
 
 def get_local_corrs(xyz, xyz_mu, feats):
-    dis = square_distance(xyz_mu, xyz)
+    dis = torch.cdist(xyz_mu, xyz)
     # c_dims = xyz.size(-1)
     f_dims = feats.size(-1)
     idx = torch.topk(dis, k=1, dim=2, largest=False)[1]
@@ -255,7 +255,37 @@ def get_local_corrs(xyz, xyz_mu, feats):
 
 
 def get_anchor_corrs(xyz, feats, num_clusters, dst='eu', iters=10, is_fast=True):
-    gamma, pi, xyz_mu = wkeans(xyz.transpose(-1, -2), num_clusters, dst, iters, is_fast)
-    feats_pos = gmm_params(gamma, feats.transpose(-1, -2))[1].transpose(-1, -2)
+    if is_fast:
+        ids = farthest_point_sample(xyz.transpose(-1, -2), num_clusters)
+        xyz_mu = index_points(xyz.transpose(-1, -2), ids)
+        feats_pos = index_points(feats.transpose(-1, -2), ids).transpose(-1, -2)
+    else:
+        gamma, pi, xyz_mu = wkeans(xyz.transpose(-1, -2), num_clusters, dst, iters, True)
+        feats_pos = gmm_params(gamma, feats.transpose(-1, -2))[1].transpose(-1, -2)
     feats_anchor = get_local_corrs(xyz.transpose(-1, -2), xyz_mu, feats.transpose(-1, -2)).transpose(-1, -2)
-    return feats_anchor, feats_pos, gamma, pi, xyz_mu.transpose(-1, -2)
+    return feats_anchor, feats_pos, xyz_mu.transpose(-1, -2)
+
+
+def wkeans_plus(xyz, feats, o_scores, n_clusters, iters=10, tau=1.0):
+    bs, num, dim = xyz.shape
+    ids = farthest_point_sample(xyz, n_clusters, True)
+    node_xyz = index_points(xyz, ids)
+    # node_feats = index_points(feats, ids)
+    device = xyz.device
+    o_scores = o_scores.detach()
+    o_scores = o_scores / o_scores.sum(dim=-1, keepdims=True).clip(min=1e-4)
+    gamma, pi = torch.ones((bs, num, n_clusters), device=device), None
+    with torch.no_grad():
+        for i in range(iters):
+            cost_xyz = torch.cdist(xyz, node_xyz).clip(min=0.0) / tau
+            gamma_xyz = sinkhorn(cost_xyz, p=o_scores, q=None, max_iter=10)[0]
+            gamma_xyz = torch.nan_to_num(gamma_xyz, nan=0.0)
+            # cost_feats = torch.cdist(feats, node_feats).clip(min=0.0)
+            # gamma_feats = sinkhorn(cost_feats / tau, p=o_scores, q=pi, max_iter=10)[0].detach()
+            # gamma_feats = torch.nan_to_num(gamma_feats, nan=0.0)
+            gamma = gamma_xyz.detach()
+            gamma = gamma / gamma.sum(dim=-1, keepdim=True).clip(min=1e-3)
+            pi, node_xyz = gmm_params(gamma, xyz)
+    node_feats = gmm_params(gamma, feats)[1]
+
+    return gamma, pi, node_xyz, node_feats
