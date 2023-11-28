@@ -100,4 +100,4 @@ class GMMReg(nn.Module):
             trans_init = integrate_trans(rot, trans)
             rot, trans = reg_solver(src, tgt, voxel_size=self.config.overlap_radius, trans_init=trans_init)
 
-        return rot, trans, src_o, tgt_o, loss, src_xyz_mu, soft_corr_mu
+        return rot, trans, src_o, tgt_o, loss, src_feats, tgt_feats
