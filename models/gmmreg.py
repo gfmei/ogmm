@@ -9,9 +9,9 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
-from lib.loss import KMLoss, CluLoss
+from lib.loss import CluLoss
 from lib.o3dutils import integrate_trans, reg_solver
-from lib.utils import gmm_params, get_anchor_corrs, wkeans_plus
+from lib.utils import get_anchor_corrs, wkeans_plus
 from models.attn import Transformer, PositionEncoding
 from models.dgcnn import DGCNN, CONV, GMMSVD
 
@@ -35,7 +35,7 @@ class GMMReg(nn.Module):
         self.emd = DGCNN(emb_dims, config.gnn_k)
         self.proj = CONV(in_size=emb_dims, out_size=1, hidden_size=emb_dims // 2, used=None)
         self.overlap = CONV(in_size=emb_dims, out_size=1, hidden_size=emb_dims // 2, used='proj')
-        self.conv1 = CONV(in_size=emb_dims, out_size=emb_dims, hidden_size=2*emb_dims, used='proj')
+        self.conv1 = CONV(in_size=emb_dims, out_size=emb_dims, hidden_size=2 * emb_dims, used='proj')
         self.conv2 = CONV(in_size=emb_dims + 2, out_size=emb_dims, hidden_size=2 * emb_dims, used='proj')
         self.cluster = Clustering(n_clusters)
         self.soft_svd = GMMSVD(False)
@@ -116,4 +116,4 @@ class GMMReg(nn.Module):
             trans_init = integrate_trans(rot, trans)
             rot, trans = reg_solver(src, tgt, voxel_size=self.config.overlap_radius, trans_init=trans_init)
 
-        return rot, trans, src_o, tgt_o, loss, src_feats, tgt_feats, src_node_xyz, tgt_node_xyz
+        return rot, trans, src_o, tgt_o, loss

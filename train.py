@@ -54,7 +54,7 @@ def train_one_epoch(epoch, model, loader, optimizer, logger, checkpoint_path, we
         rot_gt, trans_gt = decompose_trans(tsfm_gt)
         batch_size = tsfm_gt.shape[0]
         trans_gt = trans_gt.view(batch_size, 3)
-        rot, trans, src_o, tgt_o, clu_loss, src_feats, tgt_feats, src_node_xyz, tgt_node_xyz = model(pts1, pts2)
+        rot, trans, src_o, tgt_o, clu_loss = model(pts1, pts2)
         o_pred = torch.cat([src_o, tgt_o], dim=-1)
         tsfm_pred = integrate_trans(rot, trans)
         o_gt = torch.cat([src_overlap, tgt_overlap], dim=-1)
@@ -134,7 +134,7 @@ def eval_one_epoch(epoch, model, loader, logger, we_loss):
         with (torch.no_grad()):
             batch_size = tsfm_gt.shape[0]
             trans_gt = trans_gt.view(batch_size, 3)
-            rot, trans, src_o, tgt_o, clu_loss, src_feats, tgt_feats, src_node_xyz, tgt_node_xyz = model(pts1, pts2, True)
+            rot, trans, src_o, tgt_o, clu_loss = model(pts1, pts2, True)
             o_pred = torch.cat([src_o, tgt_o], dim=-1)
             o_gt = torch.cat([src_overlap, tgt_overlap], dim=-1)
             o_pred, o_gt = torch.nan_to_num(o_pred, nan=0.0).clip(min=0.0), torch.nan_to_num(o_gt, nan=0.0).clip(
@@ -145,8 +145,10 @@ def eval_one_epoch(epoch, model, loader, logger, we_loss):
             r_err = rotation_error(rot, rot_gt)
             t_err = translation_error(trans, trans_gt)
             try:
+                tsfm_pred = integrate_trans(rot, trans)
                 loss = 10 * dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(
-                    o_pred, o_gt)
+                    o_pred, o_gt) + 0.01 * we_loss(pts1.transpose(1, 2), pts2.transpose(1, 2),
+                                               tsfm_pred, src_overlap, tgt_overlap)
             except Exception as e:
                 loss = 10 * dcp_loss(rot, rot_gt, trans, trans_gt)
             # training accuracy statistic
