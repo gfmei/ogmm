@@ -20,7 +20,7 @@ from configs.cfgs import mnet
 from datasets.dataloader import data_loader
 from lib.loss import dcp_loss, get_weighted_bce_loss, WelschLoss
 from lib.metric import rotation_error, translation_error, dcp_metrics, summarize_metrics, save_model, _init_
-from lib.se3 import decompose_trans
+from lib.se3 import decompose_trans, integrate_trans
 from models.gmmreg import GMMReg
 
 
@@ -56,6 +56,7 @@ def train_one_epoch(epoch, model, loader, optimizer, logger, checkpoint_path, we
         trans_gt = trans_gt.view(batch_size, 3)
         rot, trans, src_o, tgt_o, clu_loss, src_feats, tgt_feats, src_node_xyz, tgt_node_xyz = model(pts1, pts2)
         o_pred = torch.cat([src_o, tgt_o], dim=-1)
+        tsfm_pred = integrate_trans(rot, trans)
         o_gt = torch.cat([src_overlap, tgt_overlap], dim=-1)
         o_pred, o_gt = torch.nan_to_num(o_pred, nan=0.0).clip(min=0.0), torch.nan_to_num(o_gt, nan=0.0).clip(min=0.0)
         assert o_pred.shape == o_gt.shape
@@ -66,8 +67,9 @@ def train_one_epoch(epoch, model, loader, optimizer, logger, checkpoint_path, we
 
         try:
             loss = 10 * dcp_loss(rot, rot_gt, trans, trans_gt) + clu_loss + get_weighted_bce_loss(
-                o_pred, o_gt)
-            loss = torch.nan_to_num(loss, nan=0.01 * we_loss(src_node_xyz, tgt_node_xyz, tsfm_gt))
+                o_pred, o_gt) + 0.01 * we_loss(pts1.transpose(1, 2), pts2.transpose(1, 2),
+                                               tsfm_pred, src_overlap, tgt_overlap)
+            loss = torch.nan_to_num(loss, nan=0.0)
         except Exception as e:
             loss = 10 * dcp_loss(rot, rot_gt, trans, trans_gt)
         loss.backward()
@@ -219,7 +221,7 @@ if __name__ == "__main__":
             model.load_state_dict(torch.load(optim_path))
         except Exception as e:
             model.module.load_state_dict(torch.load(optim_path))
-    we_loss = WelschLoss(args.mu)
+    we_loss = WelschLoss(args.mu, args.n_keypoints)
     for epoch in range(args.epochs):
         train_metrics = train_one_epoch(epoch, model, train_loader, optimizer, logger, checkpoint_path, we_loss)
         val_metrics = eval_one_epoch(epoch, model, test_loader, logger, we_loss)

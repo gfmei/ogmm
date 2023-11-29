@@ -2,16 +2,15 @@
 # -*- coding: utf-8 -*-
 # @Time    : 12/11/2022 11:13 AM
 # @Author  : Guofeng Mei
-# @Email   : Guofeng.Mei@student.uts.edu.au
+# @Email   : gmei@fbk.eu
 # @File    : loss.py
 # @Software: PyCharm
 import torch
 import torch.nn.functional as F
 from torch import nn
-import numpy as np
 
 from lib.se3 import torch_transform
-from lib.utils import gmm_params, contrastsk, get_local_corrs, sinkhorn
+from lib.utils import gmm_params, contrastsk, get_local_corrs
 
 
 class ConLoss(nn.Module):
@@ -87,30 +86,23 @@ class WelschLoss(nn.Module):
         self.alpha = alpha
         self.top_k = top_k
 
-    def forward(self, src, tgt, tsfm, src_feats=None, tgt_feats=None, src_o=None, tgt_o=None):
-        if src_feats is not None and tgt_feats is not None:
-            if src_o is not None and tgt_o is not None:
-                cost = torch.cdist(src_feats, tgt_feats).clip(min=1e-4)
-                src_o = src_o / src_o.sum(dim=-1, keepdims=True).clip(min=1e-4)
-                tgt_o = tgt_o / tgt_o.sum(dim=-1, keepdims=True).clip(min=1e-4)
-                score = sinkhorn(cost, p=src_o, q=tgt_o)[0].clip(min=1e-4)
-                score = score / score.sum(dim=-1, keepdims=True).clip(min=1e-4)
-            else:
-                score = torch.softmax(torch.matmul(
-                    src_feats, tgt_feats.transpose(-1, -2)) / np.sqrt(src_feats.shape[-1]), dim=-1)
-            # score = torch.softmax(torch.matmul(
-            #     src_feats, tgt_feats.transpose(-1, -2)) / np.sqrt(src_feats.shape[-1]), dim=-1)
-            tgt_corr = torch.matmul(score, tgt)
-            # ids = torch.topk(score.max(dim=-1)[0], k=self.top_k, dim=-1)[1].detach()
-            # ids = ids.unsqueeze(-1).expand(-1, -1, src.size(-1))
-            # src = torch.gather(src, index=ids, dim=1)
-            # tgt_corr = torch.gather(tgt_corr, index=ids, dim=1)
-        else:
-            tgt_corr = tgt
+    def forward(self, src, tgt, tsfm, src_o=None, tgt_o=None):
         src = torch_transform(tsfm, src, normals=None)
+        if src_o is not None and tgt_o is not None:
+            src_ids = torch.topk(src_o, k=self.top_k, dim=-1)[1]
+            src_ids = src_ids.unsqueeze(-1).expand(-1, -1, src.size(-1))
+            src_corr = torch.gather(src, index=src_ids, dim=1)
+            tgt_ids = torch.topk(tgt_o, k=self.top_k, dim=-1)[1]
+            tgt_ids = tgt_ids.unsqueeze(-1).expand(-1, -1, tgt.size(-1))
+            tgt_corr = torch.gather(tgt, index=tgt_ids, dim=1)
+        else:
+            src_corr = src
+            tgt_corr = tgt
         alpha2 = self.alpha * self.alpha
-        z = torch.norm(src - tgt_corr, dim=-1)
-        loss = (1.0 - torch.exp(-0.5 * torch.pow(z, 2.0) / alpha2)).sum(dim=-1)
+        z1 = torch.cdist(src_corr, tgt).min(dim=-1)[0]
+        z2 = torch.cdist(tgt_corr, src).min(dim=-1)[0]
+        loss = (2.0 - torch.exp(-0.5 * torch.pow(z1, 2.0) / alpha2) -
+                torch.exp(-0.5 * torch.pow(z2, 2.0) / alpha2)).sum(dim=1)
         return loss.mean()
 
 
@@ -143,5 +135,4 @@ def con_loss(src_desc, tgt_desc, tau=0.1):
 
 
 def get_weighted_bce_loss(prediction, gt):
-
     return F.mse_loss(prediction, gt)
