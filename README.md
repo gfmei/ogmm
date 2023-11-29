@@ -39,7 +39,7 @@ Our model is trained with the following environment:
 * tensorboard
 
 ## Acknowledgements
-Our code is built upon various repositories including [FMR](https://github.com/XiaoshuiHuang/fmr), [DeepGMR](https://github.com/wentaoyuan/deepgmr), and [JRMPC](https://team.inria.fr/perception/research/jrmpc/).
+Our code is built upon various repositories including [FMR](https://github.com/XiaoshuiHuang/fmr), [DeepGMR](https://github.com/wentaoyuan/deepgmr), and [probreg](https://github.com/neka-nat/probreg/tree/master).
 
 ## Citation
 If you find our work useful, please consider citing our paper:
