@@ -9,9 +9,6 @@ We introduce a Transformer-based detection module to detect overlapping regions,
 Experiments show that our method achieves superior registration accuracy and efficiency than state-of-the-art methods when handling point clouds with partial overlap and different densities on synthetic and real-world datasets.
 Now it is a draft version, we will update it as soon as possible.
 
-
-If you find our work useful, please consider citing our paper:
-
 ## Usage
 ### Training
 To train the model, run the following command:
