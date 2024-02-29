@@ -1,6 +1,6 @@
 ## Overlap-guided Gaussian Mixture Models for Point Cloud Registration
 
-## Intorduction
+## Introduction
 Probabilistic 3D point cloud registration methods have shown competitive performance in overcoming noise, outliers, and density variations. 
 However, registering point cloud pairs in the case of partial overlap is still a challenge. 
 This paper proposes a novel overlap-guided probabilistic registration approach that computes the optimal transformation from matched Gaussian Mixture Model (GMM) parameters.
